@@ -6,9 +6,10 @@ namespace DatingApp.API.Data
 {
     public class Seed
     {
-        public static void SeedUsers(DataContext context)
+        public static void SeedUsers(DataContext context, string contentRoot)
         {
-            var userData = System.IO.File.ReadAllText("Data/UserSeedData.json");
+            var userData = System.IO.File.ReadAllText(
+                System.IO.Path.Combine(contentRoot, "Data", "UserSeedData.json"));
             var users = JsonSerializer.Deserialize<List<User>>(userData,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             foreach (var user in users)

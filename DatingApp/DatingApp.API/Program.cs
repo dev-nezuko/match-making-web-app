@@ -1,11 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using DatingApp.API.Data;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -23,9 +18,8 @@ namespace DatingApp.API
                 try
                 {
                     var context = services.GetRequiredService<DataContext>();
-                    context.Database.Migrate();
-                    Seed.SeedUsers(context);
-                    Console.WriteLine("I have started");
+                    var env = services.GetRequiredService<IWebHostEnvironment>();
+                    DatabaseSetup.MigrateAndSeed(context, env.ContentRootPath);
                 }
                 catch (Exception ex)
                 {
