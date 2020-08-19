@@ -11,13 +11,6 @@
       <button type="button" class="btn btn--small" (click)="like()" [attr.aria-label]="'Like ' + user().knownAs">
         Like
       </button>
-      <a
-        class="btn btn--small btn--ghost"
-        [routerLink]="['/members', user().id]"
-        [queryParams]="{ tab: 'messages' }"
-        [attr.aria-label]="'Message ' + user().knownAs"
-        >Message</a
-      >
       <button
         type="button"
         class="btn btn--small btn--ghost"
@@ -26,6 +19,13 @@
       >
         Pass
       </button>
+      <a
+        class="btn btn--small btn--ghost member__message"
+        [routerLink]="['/members', user().id]"
+        [queryParams]="{ tab: 'messages' }"
+        [attr.aria-label]="'Message ' + user().knownAs"
+        >Message</a
+      >
     </div>
   </div>
 </article>
