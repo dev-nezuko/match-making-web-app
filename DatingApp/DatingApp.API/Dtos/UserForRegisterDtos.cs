@@ -9,10 +9,7 @@ namespace DatingApp.API.Dtos
         public string Username { get; set; }
 
         [Required]
-        // Was StringLength(8, MinimumLength = 4). The password is hashed with
-        // HMACSHA512 into a fixed 64 bytes, so nothing downstream cared how long
-        // it was -- the cap only removed entropy. A 4-character minimum on a
-        // dating account is worse still.
+        // Hashed to a fixed 64 bytes, so the upper bound only limits request size.
         [StringLength(128, MinimumLength = 8, ErrorMessage = "Your password must be at least 8 characters")]
         public string Password { get; set; }
 

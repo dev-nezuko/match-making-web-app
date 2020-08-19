@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
+#nullable disable
+
 namespace DatingApp.API.Migrations
 {
     [DbContext(typeof(DataContext))]
@@ -13,8 +15,7 @@ namespace DatingApp.API.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "3.1.7");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.14");
 
             modelBuilder.Entity("DatingApp.API.Models.Block", b =>
                 {
@@ -184,20 +185,6 @@ namespace DatingApp.API.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("DatingApp.API.Models.Value", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Values");
-                });
-
             modelBuilder.Entity("DatingApp.API.Models.Block", b =>
                 {
                     b.HasOne("DatingApp.API.Models.User", "Blockee")
@@ -211,6 +198,10 @@ namespace DatingApp.API.Migrations
                         .HasForeignKey("BlockerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Blockee");
+
+                    b.Navigation("Blocker");
                 });
 
             modelBuilder.Entity("DatingApp.API.Models.Dislike", b =>
@@ -226,6 +217,10 @@ namespace DatingApp.API.Migrations
                         .HasForeignKey("DislikerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Dislikee");
+
+                    b.Navigation("Disliker");
                 });
 
             modelBuilder.Entity("DatingApp.API.Models.Like", b =>
@@ -241,6 +236,10 @@ namespace DatingApp.API.Migrations
                         .HasForeignKey("LikerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Likee");
+
+                    b.Navigation("Liker");
                 });
 
             modelBuilder.Entity("DatingApp.API.Models.Message", b =>
@@ -256,6 +255,10 @@ namespace DatingApp.API.Migrations
                         .HasForeignKey("SenderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Recipient");
+
+                    b.Navigation("Sender");
                 });
 
             modelBuilder.Entity("DatingApp.API.Models.Photo", b =>
@@ -265,6 +268,29 @@ namespace DatingApp.API.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DatingApp.API.Models.User", b =>
+                {
+                    b.Navigation("Blockees");
+
+                    b.Navigation("Blockers");
+
+                    b.Navigation("Dislikees");
+
+                    b.Navigation("Dislikers");
+
+                    b.Navigation("Likees");
+
+                    b.Navigation("Likers");
+
+                    b.Navigation("MessagesReceived");
+
+                    b.Navigation("MessagesSent");
+
+                    b.Navigation("Photos");
                 });
 #pragma warning restore 612, 618
         }

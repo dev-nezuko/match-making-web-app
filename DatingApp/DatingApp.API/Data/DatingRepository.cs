@@ -51,8 +51,7 @@ namespace DatingApp.API.Data
             }
             else
             {
-                // A block hides people from each other in both directions;
-                // only "people who blocked me" were left visible before.
+                // A block hides the two members from each other both ways.
                 var blockedMe = _context.Blocks.Where(b => b.BlockeeId == me).Select(b => b.BlockerId);
                 users = users.Where(u => !blockedByMe.Contains(u.Id) && !blockedMe.Contains(u.Id));
             }
@@ -71,10 +70,8 @@ namespace DatingApp.API.Data
 
             if (userParams.MinAge != 18 || userParams.MaxAge != 99)
             {
-                // Someone is MinAge if born on or before today minus MinAge
-                // years, and at most MaxAge if born after today minus MaxAge+1.
-                // The upper bound used to subtract an extra year, which hid
-                // everyone exactly MinAge years old.
+                // At least MinAge: born on or before today minus MinAge years.
+                // At most MaxAge: born after today minus (MaxAge + 1) years.
                 var minDob = DateTime.Today.AddYears(-userParams.MaxAge - 1);
                 var maxDob = DateTime.Today.AddYears(-userParams.MinAge);
 

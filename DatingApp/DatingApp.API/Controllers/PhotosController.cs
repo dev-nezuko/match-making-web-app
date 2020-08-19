@@ -27,8 +27,7 @@ namespace DatingApp.API.Controllers
             _cloudinarySettings = cloudinaryConfig.Value;
         }
 
-        // Built per upload/delete rather than in the constructor: an
-        // unconfigured account used to break every photo route, including reads.
+        // Created on demand so that reading photos works without Cloudinary.
         private Cloudinary CreateCloudinary() => new Cloudinary(new Account(
             _cloudinarySettings.CloudName, _cloudinarySettings.ApiKey, _cloudinarySettings.ApiSecret));
 

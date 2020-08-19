@@ -9,8 +9,7 @@ namespace DatingApp.API.Data
     {
         public static void SeedUsers(DataContext context, string contentRoot)
         {
-            // Startup calls this on every boot; without the guard each restart
-            // added the whole seed set again under the same usernames.
+            // Runs on every start; only an empty database gets the demo members.
             if (context.Users.Any())
                 return;
 

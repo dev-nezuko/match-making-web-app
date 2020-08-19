@@ -31,9 +31,7 @@ namespace DatingApp.API.Data
             using (var hmac = new System.Security.Cryptography.HMACSHA512(passwordSalt))
             {
                 var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-                // The original compared byte by byte and returned on the first
-                // mismatch, so how long the check took leaked how much of the
-                // hash was correct. FixedTimeEquals always takes the same time.
+                // Constant time, so response timing cannot reveal how much of the hash matched.
                 return System.Security.Cryptography.CryptographicOperations
                     .FixedTimeEquals(computedHash, passwordHash);
             }

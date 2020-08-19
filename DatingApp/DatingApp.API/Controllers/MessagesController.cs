@@ -35,14 +35,10 @@ namespace DatingApp.API.Controllers
             if (messageFromRepo == null)
                 return NotFound();
 
-            // Reading a message you are not part of is not yours to do.
             if (messageFromRepo.SenderId != userId && messageFromRepo.RecipientId != userId)
                 return Unauthorized();
 
-            // This returned the EF entity directly. Message -> Sender -> MessagesSent
-            // -> Message is a cycle, so the serialiser threw and the endpoint
-            // answered 500 every single time. Every other action here maps to a
-            // DTO first; this one did not.
+            // Always map: the entity graph (Message -> Sender -> MessagesSent) is cyclic.
             return Ok(messageFromRepo.ToReturnDto());
         }
 
@@ -154,11 +150,7 @@ namespace DatingApp.API.Controllers
             if (messageFromRepo == null)
                 return NotFound();
 
-            // `if (userId != null)` stood here. userId is an int, so it was
-            // always true -- and it was the only thing between an authenticated
-            // caller and a hard delete. Nothing checked that the caller was in
-            // the conversation, so any signed-in user could permanently remove
-            // any message in the database by passing its id.
+            // A hard delete: only someone in the conversation may do it.
             if (messageFromRepo.SenderId != userId && messageFromRepo.RecipientId != userId)
                 return Unauthorized();
 

@@ -83,8 +83,7 @@ namespace DatingApp.API.Controllers
             if (user == null)
                 return NotFound();
 
-            // Likes, blocks and messages reference the user with Restrict
-            // foreign keys, so deleting the row alone always failed.
+            // Likes, blocks and messages use Restrict foreign keys.
             await _repo.DeleteUserWithRelations(user);
 
             if (await _repo.SaveAll())
