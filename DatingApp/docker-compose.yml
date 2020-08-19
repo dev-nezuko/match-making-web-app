@@ -1,0 +1,19 @@
+services:
+  api:
+    build: ./DatingApp.API
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Data Source=/data/datingapp.db"
+      # ASP.NET Core maps __ onto the : in a config key.
+      AppSettings__Token: "${APP_TOKEN_KEY:?Set APP_TOKEN_KEY in DatingApp/.env (see .env.example)}"
+    volumes:
+      - api-data:/data
+    ports: ["5050:5000"]
+
+  spa:
+    build: ./DatingApp-SPA
+    depends_on: [api]
+    ports: ["4200:80"]
+
+volumes:
+  api-data:
