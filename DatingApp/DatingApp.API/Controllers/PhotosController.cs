@@ -1,7 +1,6 @@
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using AutoMapper;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using DatingApp.API.Data;
@@ -20,15 +19,13 @@ namespace DatingApp.API.Controllers
     public class PhotosController : ControllerBase
     {
         private readonly IDatingRepository _repo;
-        private readonly IMapper _mapper;
         private readonly IOptions<CloudinarySettings> _cloudinaryConfig;
         private Cloudinary _cloudinary;
 
-        public PhotosController(IDatingRepository repo, IMapper mapper,
+        public PhotosController(IDatingRepository repo,
             IOptions<CloudinarySettings> cloudinaryConfig)
         {
             _cloudinaryConfig = cloudinaryConfig;
-            _mapper = mapper;
             _repo = repo;
 
             Account acc = new Account(
@@ -45,7 +42,7 @@ namespace DatingApp.API.Controllers
         {
             var photoFromRepo = await _repo.GetPhoto(id);
 
-            var photo = _mapper.Map<PhotoForReturnDto>(photoFromRepo);
+            var photo = photoFromRepo.ToReturnDto();
 
             return Ok(photo);
         }
@@ -77,10 +74,10 @@ namespace DatingApp.API.Controllers
                 }
             }
 
-            photoForCreationDto.Url = uploadResult.Uri.ToString();
+            photoForCreationDto.Url = uploadResult.SecureUrl.ToString();
             photoForCreationDto.PublicId = uploadResult.PublicId;
 
-            var photo = _mapper.Map<Photo>(photoForCreationDto);
+            var photo = photoForCreationDto.ToPhoto();
 
             if (!userFromRepo.Photos.Any(u => u.IsMain))
                 photo.IsMain = true;
@@ -89,7 +86,7 @@ namespace DatingApp.API.Controllers
 
             if (await _repo.SaveAll())
             {
-                var photoToReturn = _mapper.Map<PhotoForReturnDto>(photo);
+                var photoToReturn = photo.ToReturnDto();
                 return CreatedAtRoute("GetPhoto", new { id = photo.Id }, photoToReturn);
             }
 

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using AutoMapper;
 using DatingApp.API.Data;
 using DatingApp.API.Dtos;
 using DatingApp.API.Helpers;
@@ -19,10 +19,8 @@ namespace DatingApp.API.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IDatingRepository _repo;
-        private readonly IMapper _mapper;
-        public UsersController(IDatingRepository repo, IMapper mapper)
+        public UsersController(IDatingRepository repo)
         {
-            _mapper = mapper;
             _repo = repo;
         }
         [HttpGet]
@@ -51,7 +49,7 @@ namespace DatingApp.API.Controllers
 
             var users = await _repo.GetUsers(userParams);
 
-            var usersToReturn = _mapper.Map<IEnumerable<UserForListDto>>(users);
+            var usersToReturn = users.Select(u => u.ToListDto()).ToList();
 
             Response.AddPagination(users.CurrentPage, users.PageSize,
                 users.TotalCount, users.TotalPages);
@@ -64,7 +62,7 @@ namespace DatingApp.API.Controllers
         {
             var user = await _repo.GetUser(id);
 
-            var userToReturn = _mapper.Map<UserForDetailedDto>(user);
+            var userToReturn = user.ToDetailedDto();
 
             return Ok(userToReturn);
         }
@@ -77,7 +75,7 @@ namespace DatingApp.API.Controllers
 
             var userFromRepo = await _repo.GetUser(id);
 
-            _mapper.Map(userForUpdateDto, userFromRepo);
+            userForUpdateDto.ApplyTo(userFromRepo);
 
             if (await _repo.SaveAll())
                 return NoContent();

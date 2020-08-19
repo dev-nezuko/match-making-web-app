@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using AutoMapper;
 using DatingApp.API.Data;
 using DatingApp.API.Dtos;
 using DatingApp.API.Helpers;
@@ -19,10 +18,8 @@ namespace DatingApp.API.Controllers
     public class MessagesController : ControllerBase
     {
         private readonly IDatingRepository _repo;
-        private readonly IMapper _mapper;
-        public MessagesController(IDatingRepository repo, IMapper mapper)
+        public MessagesController(IDatingRepository repo)
         {
-            _mapper = mapper;
             _repo = repo;
         }
 
@@ -46,7 +43,7 @@ namespace DatingApp.API.Controllers
             // -> Message is a cycle, so the serialiser threw and the endpoint
             // answered 500 every single time. Every other action here maps to a
             // DTO first; this one did not.
-            return Ok(_mapper.Map<MessageToReturnDto>(messageFromRepo));
+            return Ok(messageFromRepo.ToReturnDto());
         }
 
 
@@ -62,7 +59,7 @@ namespace DatingApp.API.Controllers
 
             var messagesFromRepo = await _repo.GetMessagesForUser(messageParams);
 
-            var messages = _mapper.Map<IEnumerable<MessageToReturnDto>>(messagesFromRepo);
+            var messages = messagesFromRepo.ToReturnDtos();
 
             Response.AddPagination(messagesFromRepo.CurrentPage, messagesFromRepo.PageSize,
                 messagesFromRepo.TotalCount, messagesFromRepo.TotalPages);
@@ -78,7 +75,7 @@ namespace DatingApp.API.Controllers
 
             var messagesFromRepo = await _repo.GetMessagesThread(userId, recipientId);
 
-            var messageThread = _mapper.Map<IEnumerable<MessageToReturnDto>>(messagesFromRepo);
+            var messageThread = messagesFromRepo.ToReturnDtos();
 
             return Ok(messageThread);
         }
@@ -99,13 +96,13 @@ namespace DatingApp.API.Controllers
             if (recipient == null)
                 return BadRequest("Could not find user");
 
-            var message = _mapper.Map<Message>(messageForCreationDto);
+            var message = messageForCreationDto.ToMessage();
 
             _repo.Add(message);
 
             if (await _repo.SaveAll())
             {
-                var messageToReturn = _mapper.Map<MessageToReturnDto>(message);
+                var messageToReturn = message.ToReturnDto();
                 return CreatedAtRoute("GetMessage", new { id = message.Id }, messageToReturn);
             }
 

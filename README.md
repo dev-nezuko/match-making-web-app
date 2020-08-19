@@ -16,7 +16,7 @@ The API is on `:5050` and the site on `:4200`. (Port 5000, which the code
 originally assumed, is taken by AirPlay on macOS.)
 
 `APP_TOKEN_KEY` is the signing key for every JWT the API issues. Any random
-value over 32 characters works locally; compose refuses to start without it.
+value of 64 or more characters works locally; compose refuses to start without it.
 
 ## Neither half started
 
@@ -173,8 +173,8 @@ console, which `.env`-style comments now say.
 ## Also
 
 - `Console.WriteLine("I am callled")` in `Startup.ConfigureServices`. Removed.
-- .NET Core 3.1 went out of support in December 2022 and Angular 10 in 2021.
-  Both still build and run; moving to current LTS versions is a separate job.
+- The API targets .NET 10 (LTS). Angular 10 went out of support in 2021.
+  The SPA still builds and runs on it; moving it forward is a separate job.
 
 ## Layout
 
