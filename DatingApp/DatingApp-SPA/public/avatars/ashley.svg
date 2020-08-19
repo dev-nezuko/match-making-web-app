@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Illustrated placeholder avatar">
+  <rect width="200" height="200" fill="#f6dfe4"/>
+  <circle cx="160" cy="38" r="26" fill="#e9b7c4"/>
+  <circle cx="34" cy="168" r="40" fill="#e9b7c4" opacity=".6"/>
+  <path d="M58 96c0-34 18-54 42-54s42 20 42 54c0 20-6 36-6 36H64s-6-16-6-36z" fill="#a23b58" opacity=".85"/>
+  <circle cx="100" cy="92" r="32" fill="#e9b7c4"/>
+  <path d="M40 200c4-40 30-62 60-62s56 22 60 62z" fill="#a23b58"/>
+</svg>
