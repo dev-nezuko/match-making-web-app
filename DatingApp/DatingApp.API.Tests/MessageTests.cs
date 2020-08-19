@@ -94,4 +94,26 @@ public class MessageTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.NoContent, mark.StatusCode);
         Assert.Empty(unread!);
     }
+
+    [Fact]
+    public async Task Marking_a_missing_message_as_read_is_not_found()
+    {
+        var me = await _factory.RegisterAndLoginAsync();
+
+        var response = await _factory.ClientFor(me).PostEmptyAsync($"/users/{me.Id}/messages/999999/read");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task An_empty_message_is_rejected()
+    {
+        var alice = await _factory.RegisterAndLoginAsync("female");
+        var bob = await _factory.RegisterAndLoginAsync("male");
+
+        var response = await _factory.ClientFor(alice).PostAsJsonAsync(
+            $"/users/{alice.Id}/messages", new { recipientId = bob.Id, content = "" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

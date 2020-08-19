@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using DatingApp.API.Models;
 using System.Text.Json;
 
@@ -8,6 +9,11 @@ namespace DatingApp.API.Data
     {
         public static void SeedUsers(DataContext context, string contentRoot)
         {
+            // Startup calls this on every boot; without the guard each restart
+            // added the whole seed set again under the same usernames.
+            if (context.Users.Any())
+                return;
+
             var userData = System.IO.File.ReadAllText(
                 System.IO.Path.Combine(contentRoot, "Data", "UserSeedData.json"));
             var users = JsonSerializer.Deserialize<List<User>>(userData,

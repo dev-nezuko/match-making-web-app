@@ -84,17 +84,20 @@ namespace DatingApp.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateMessage(int userId, MessageForCreationDto messageForCreationDto)
         {
-            var Sender = await _repo.GetUser(userId);
-            if (Sender.Id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
+            if (userId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
                 return Unauthorized();
 
-
-            messageForCreationDto.SenderId = userId;
-
+            // Loaded so the returned DTO carries both names and photos.
+            var sender = await _repo.GetUser(userId);
             var recipient = await _repo.GetUser(messageForCreationDto.RecipientId);
 
-            if (recipient == null)
+            if (sender == null || recipient == null)
                 return BadRequest("Could not find user");
+
+            if (await _repo.EitherBlocked(userId, recipient.Id))
+                return BadRequest("You cannot message this member");
+
+            messageForCreationDto.SenderId = userId;
 
             var message = messageForCreationDto.ToMessage();
 
@@ -177,6 +180,9 @@ namespace DatingApp.API.Controllers
                 return Unauthorized();
 
             var message = await _repo.GetMessage(id);
+
+            if (message == null)
+                return NotFound();
 
             if (message.RecipientId != userId)
                 return Unauthorized();

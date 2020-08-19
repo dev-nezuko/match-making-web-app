@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -19,42 +18,32 @@ namespace DatingApp.API.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IDatingRepository _repo;
+
         public UsersController(IDatingRepository repo)
         {
             _repo = repo;
         }
+
+        private int CallerId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+
         [HttpGet]
         public async Task<IActionResult> GetUsers([FromQuery] UserParams userParams)
         {
-            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+            var userFromRepo = await _repo.GetUser(CallerId);
+            if (userFromRepo == null)
+                return Unauthorized();
 
-            // Console.WriteLine("likee" + currentUserId);
-
-            var userFromRepo = await _repo.GetUser(currentUserId);
-
-            userParams.UserId = currentUserId;
-            //  Console.WriteLine("hello iaam checking userParams " + userParams.Blockees);
-            if (userParams.Blockees != true)
-                userParams.Blockers = true;
-
-            if (userParams.Blockees == true)
-            {
-                userParams.Blockers = false;
-            }
+            userParams.UserId = CallerId;
 
             if (string.IsNullOrEmpty(userParams.Gender))
-            {
                 userParams.Gender = userFromRepo.Gender == "male" ? "female" : "male";
-            }
 
             var users = await _repo.GetUsers(userParams);
-
-            var usersToReturn = users.Select(u => u.ToListDto()).ToList();
 
             Response.AddPagination(users.CurrentPage, users.PageSize,
                 users.TotalCount, users.TotalPages);
 
-            return Ok(usersToReturn);
+            return Ok(users.Select(u => u.ToListDto()).ToList());
         }
 
         [HttpGet("{id}", Name = "GetUser")]
@@ -62,15 +51,16 @@ namespace DatingApp.API.Controllers
         {
             var user = await _repo.GetUser(id);
 
-            var userToReturn = user.ToDetailedDto();
+            if (user == null)
+                return NotFound();
 
-            return Ok(userToReturn);
+            return Ok(user.ToDetailedDto());
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateUser(int id, UserForUpdateDto userForUpdateDto)
         {
-            if (id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
+            if (id != CallerId)
                 return Unauthorized();
 
             var userFromRepo = await _repo.GetUser(id);
@@ -86,27 +76,27 @@ namespace DatingApp.API.Controllers
         [HttpPost("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
-            if (id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
+            if (id != CallerId)
                 return Unauthorized();
+
             var user = await _repo.GetUser(id);
-            Console.WriteLine("user is " + user);
             if (user == null)
                 return NotFound();
 
-            //await _repo.DelUser(id);
-
-            _repo.Delete<User>(user);
+            // Likes, blocks and messages reference the user with Restrict
+            // foreign keys, so deleting the row alone always failed.
+            await _repo.DeleteUserWithRelations(user);
 
             if (await _repo.SaveAll())
                 return Ok();
 
             return BadRequest("Failed to delete user");
         }
-        [HttpPost("{id}/unblock/{recipientId}")]
 
+        [HttpPost("{id}/unblock/{recipientId}")]
         public async Task<IActionResult> UnblockUser(int id, int recipientId)
         {
-            if (id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
+            if (id != CallerId)
                 return Unauthorized();
 
             var block = await _repo.GetBlock(id, recipientId);
@@ -114,44 +104,34 @@ namespace DatingApp.API.Controllers
             if (block == null)
                 return BadRequest("You have not blocked this user");
 
-            if (await _repo.GetUser(recipientId) == null)
-                return NotFound();
+            _repo.Delete(block);
 
-            await _repo.DelBlock(id, recipientId);
+            if (await _repo.SaveAll())
+                return Ok();
 
-            return Ok();
+            return BadRequest("Failed to unblock user");
         }
-
-
 
         [HttpPost("{id}/like/{recipientId}")]
         public async Task<IActionResult> LikeUser(int id, int recipientId)
         {
-            if (id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
+            if (id != CallerId)
                 return Unauthorized();
 
-            var like = await _repo.GetLike(id, recipientId);
+            if (id == recipientId)
+                return BadRequest("You cannot like yourself");
 
-            if (like != null)
+            if (await _repo.GetLike(id, recipientId) != null)
                 return BadRequest("You already like this user");
 
-            var dislike = await _repo.GetDislike(id, recipientId);
-
-            if (dislike != null)
-            {
-                await _repo.DelDislike(id, recipientId);
-                //return BadRequest("Your like has been removed. You now dislike it.");
-            }
             if (await _repo.GetUser(recipientId) == null)
                 return NotFound();
 
-            like = new Like
-            {
-                LikerId = id,
-                LikeeId = recipientId
-            };
+            var dislike = await _repo.GetDislike(id, recipientId);
+            if (dislike != null)
+                _repo.Delete(dislike);
 
-            _repo.Add<Like>(like);
+            _repo.Add(new Like { LikerId = id, LikeeId = recipientId });
 
             if (await _repo.SaveAll())
                 return Ok();
@@ -159,70 +139,54 @@ namespace DatingApp.API.Controllers
             return BadRequest("Failed to like user");
         }
 
+        [HttpPost("{id}/dislike/{recipientId}")]
+        public async Task<IActionResult> DislikeUser(int id, int recipientId)
+        {
+            if (id != CallerId)
+                return Unauthorized();
+
+            if (id == recipientId)
+                return BadRequest("You cannot dislike yourself");
+
+            if (await _repo.GetDislike(id, recipientId) != null)
+                return BadRequest("You already disliked this user");
+
+            if (await _repo.GetUser(recipientId) == null)
+                return NotFound();
+
+            var like = await _repo.GetLike(id, recipientId);
+            if (like != null)
+                _repo.Delete(like);
+
+            _repo.Add(new Dislike { DislikerId = id, DislikeeId = recipientId });
+
+            if (await _repo.SaveAll())
+                return Ok();
+
+            return BadRequest("Failed to dislike user");
+        }
+
         [HttpPost("{id}/block/{recipientId}")]
         public async Task<IActionResult> BlockUser(int id, int recipientId)
         {
-            if (id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
+            if (id != CallerId)
                 return Unauthorized();
 
-            var block = await _repo.GetBlock(id, recipientId);
+            if (id == recipientId)
+                return BadRequest("You cannot block yourself");
 
-            if (block != null)
+            if (await _repo.GetBlock(id, recipientId) != null)
                 return BadRequest("You already blocked this user");
 
             if (await _repo.GetUser(recipientId) == null)
                 return NotFound();
 
-            block = new Block
-            {
-                BlockerId = id,
-                BlockeeId = recipientId
-            };
-
-            _repo.Add<Block>(block);
+            _repo.Add(new Block { BlockerId = id, BlockeeId = recipientId });
 
             if (await _repo.SaveAll())
                 return Ok();
 
             return BadRequest("Failed to block user");
         }
-
-
-
-        [HttpPost("{id}/dislike/{recipientId}")]
-        public async Task<IActionResult> DislikeUser(int id, int recipientId)
-        {
-            if (id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
-                return Unauthorized();
-
-            var dislike = await _repo.GetDislike(id, recipientId);
-
-            if (dislike != null)
-                return BadRequest("You already disliked this user");
-
-            var like = await _repo.GetLike(id, recipientId);
-
-            if (like != null)
-            {
-                await _repo.DelLike(id, recipientId);
-                //return BadRequest("Your like has been removed. You now dislike it.");
-            }
-            if (await _repo.GetUser(recipientId) == null)
-                return NotFound();
-
-            dislike = new Dislike
-            {
-                DislikerId = id,
-                DislikeeId = recipientId
-            };
-
-            _repo.Add<Dislike>(dislike);
-
-            if (await _repo.SaveAll())
-                return Ok();
-
-            return BadRequest("Failed to Dislike user");
-        }
     }
-
 }

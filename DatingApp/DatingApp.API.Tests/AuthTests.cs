@@ -92,4 +92,12 @@ public class AuthTests : IClassFixture<ApiFactory>
         var error = Assert.Throws<InvalidOperationException>(() => TokenKey.From(config));
         Assert.Contains("AppSettings:Token", error.Message);
     }
+
+    [Fact]
+    public async Task Logging_in_without_a_username_is_a_bad_request()
+    {
+        var response = await _factory.CreateClient().PostAsJsonAsync("/auth/login", new { password = "whatever" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

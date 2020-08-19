@@ -105,4 +105,68 @@ public class UserTests : IClassFixture<ApiFactory>
         Assert.Equal("Bergen", profile.GetProperty("city").GetString());
         Assert.Equal("Hiker", profile.GetProperty("introduction").GetString());
     }
+
+    [Fact]
+    public async Task The_age_filter_includes_someone_exactly_the_minimum_age()
+    {
+        var me = await _factory.RegisterAndLoginAsync("female");
+        var turns25Today = await _factory.RegisterAndLoginAsync("male", DateTime.Today.AddYears(-25));
+        var turned31Today = await _factory.RegisterAndLoginAsync("male", DateTime.Today.AddYears(-31));
+
+        var ids = await IdsAsync(_factory.ClientFor(me), "minAge=25&maxAge=30");
+
+        Assert.Contains(turns25Today.Id, ids);
+        Assert.DoesNotContain(turned31Today.Id, ids);
+    }
+
+    [Fact]
+    public async Task Someone_who_blocked_you_disappears_from_your_list_and_inbox_reach()
+    {
+        var me = await _factory.RegisterAndLoginAsync("female");
+        var him = await _factory.RegisterAndLoginAsync("male");
+
+        await _factory.ClientFor(him).PostEmptyAsync($"/users/{him.Id}/block/{me.Id}");
+        var ids = await IdsAsync(_factory.ClientFor(me), "");
+        var message = await _factory.ClientFor(me).PostAsJsonAsync(
+            $"/users/{me.Id}/messages", new { recipientId = him.Id, content = "Why?" });
+
+        Assert.DoesNotContain(him.Id, ids);
+        Assert.Equal(HttpStatusCode.BadRequest, message.StatusCode);
+    }
+
+    [Fact]
+    public async Task An_unknown_member_is_not_found()
+    {
+        var me = await _factory.RegisterAndLoginAsync();
+
+        var response = await _factory.ClientFor(me).GetAsync("/users/999999");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Liking_yourself_is_rejected()
+    {
+        var me = await _factory.RegisterAndLoginAsync();
+
+        var response = await _factory.ClientFor(me).PostEmptyAsync($"/users/{me.Id}/like/{me.Id}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Deleting_an_account_that_has_likes_and_messages_succeeds()
+    {
+        var me = await _factory.RegisterAndLoginAsync("female");
+        var him = await _factory.RegisterAndLoginAsync("male");
+        var client = _factory.ClientFor(me);
+        await client.PostEmptyAsync($"/users/{me.Id}/like/{him.Id}");
+        await client.PostAsJsonAsync($"/users/{me.Id}/messages", new { recipientId = him.Id, content = "Hello" });
+
+        var delete = await client.PostEmptyAsync($"/users/{me.Id}");
+        var lookup = await _factory.ClientFor(him).GetAsync($"/users/{me.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, delete.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, lookup.StatusCode);
+    }
 }
