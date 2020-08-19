@@ -1,220 +1,79 @@
-<form [formGroup]="registerForm" (ngSubmit)="register()">
-  <h2 class="text-center text-primary">Sign Up</h2>
+<form [formGroup]="form" (ngSubmit)="register()" novalidate>
+  <h2 id="register-title">Create an account</h2>
 
-  <hr />
-  <div class="form-group">
-    <label class="control-label" style="margin-right: 10px">I am a: </label>
-    <label class="radio-inline">
-      <input
-        class="mr-3"
-        type="radio"
-        value="male"
-        formControlName="gender"
-      />Male
-    </label>
-    <label class="radio-inline ml-3">
-      <input
-        class="mr-3"
-        type="radio"
-        value="female"
-        formControlName="gender"
-      />Female
-    </label>
-  </div>
+  <fieldset class="field register__gender">
+    <legend>I am</legend>
+    <div class="segmented">
+      <input id="gender-female" type="radio" value="female" formControlName="gender" />
+      <label for="gender-female">a woman</label>
+      <input id="gender-male" type="radio" value="male" formControlName="gender" />
+      <label for="gender-male">a man</label>
+    </div>
+  </fieldset>
 
-  <div class="form-group">
-    <input
-      type="text"
-      [ngClass]="{
-        'is-invalid':
-          registerForm.get('username').errors &&
-          registerForm.get('username').touched
-      }"
-      class="form-control"
-      formControlName="username"
-      placeholder="Username"
-    />
-    <div class="invalid-feedback">Please Choose a Username</div>
-  </div>
-
-  <div class="form-group">
-    <input
-      [ngClass]="{
-        'is-invalid':
-          registerForm.get('knownAs').errors &&
-          registerForm.get('knownAs').touched
-      }"
-      class="form-control"
-      placeholder="Known as"
-      formControlName="knownAs"
-    />
-    <div
-      class="invalid-feedback"
-      *ngIf="
-        registerForm.get('knownAs').touched &&
-        registerForm.get('knownAs').hasError('required')
-      "
-    >
-      Known as is required
+  <div class="register__row">
+    <div class="field">
+      <label for="reg-username">Username</label>
+      <input id="reg-username" formControlName="username" autocomplete="username" [attr.aria-invalid]="invalid('username')" aria-describedby="reg-username-error" />
+      @if (invalid('username')) {
+        <p id="reg-username-error" class="field__error">Choose a username.</p>
+      }
+    </div>
+    <div class="field">
+      <label for="reg-known-as">Shown as</label>
+      <input id="reg-known-as" formControlName="knownAs" [attr.aria-invalid]="invalid('knownAs')" aria-describedby="reg-known-as-error" />
+      @if (invalid('knownAs')) {
+        <p id="reg-known-as-error" class="field__error">Tell people what to call you.</p>
+      }
     </div>
   </div>
 
-  <div class="form-group">
-    <input
-      [ngClass]="{
-        'is-invalid':
-          registerForm.get('dateOfBirth').errors &&
-          registerForm.get('dateOfBirth').touched
-      }"
-      class="form-control"
-      placeholder="Date of Birth"
-      formControlName="dateOfBirth"
-      type="text"
-      bsDatepicker
-      [bsConfig]="bsConfig"
-    />
-    <div
-      class="invalid-feedback"
-      *ngIf="
-        registerForm.get('dateOfBirth').touched &&
-        registerForm.get('dateOfBirth').hasError('required')
-      "
-    >
-      Date of Birth is required
+  <div class="field">
+    <label for="reg-dob">Date of birth</label>
+    <input id="reg-dob" type="date" formControlName="dateOfBirth" [attr.aria-invalid]="invalid('dateOfBirth')" aria-describedby="reg-dob-error" />
+    @if (invalid('dateOfBirth')) {
+      <p id="reg-dob-error" class="field__error">
+        {{ form.controls.dateOfBirth.hasError('underage') ? 'You need to be 18 or over.' : 'Enter your date of birth.' }}
+      </p>
+    }
+  </div>
+
+  <div class="register__row">
+    <div class="field">
+      <label for="reg-city">City</label>
+      <input id="reg-city" formControlName="city" autocomplete="address-level2" [attr.aria-invalid]="invalid('city')" />
+    </div>
+    <div class="field">
+      <label for="reg-country">Country</label>
+      <input id="reg-country" formControlName="country" autocomplete="country-name" [attr.aria-invalid]="invalid('country')" />
     </div>
   </div>
 
-  <div class="form-group">
-    <input
-      [ngClass]="{
-        'is-invalid':
-          registerForm.get('city').errors && registerForm.get('city').touched
-      }"
-      class="form-control"
-      placeholder="City"
-      formControlName="city"
-    />
-    <div
-      class="invalid-feedback"
-      *ngIf="
-        registerForm.get('city').touched &&
-        registerForm.get('city').hasError('required')
-      "
-    >
-      City is required
-    </div>
+  <div class="field">
+    <label for="reg-password">Password</label>
+    <input id="reg-password" type="password" formControlName="password" autocomplete="new-password" [attr.aria-invalid]="invalid('password')" aria-describedby="reg-password-hint" />
+    <p id="reg-password-hint" [class]="invalid('password') ? 'field__error' : 'register__hint'">At least 8 characters.</p>
   </div>
 
-  <div class="form-group">
+  <div class="field">
+    <label for="reg-confirm">Confirm password</label>
     <input
-      [ngClass]="{
-        'is-invalid':
-          registerForm.get('country').errors &&
-          registerForm.get('country').touched
-      }"
-      class="form-control"
-      placeholder="Country"
-      formControlName="country"
-    />
-    <div
-      class="invalid-feedback"
-      *ngIf="
-        registerForm.get('country').touched &&
-        registerForm.get('country').hasError('required')
-      "
-    >
-      Country is required
-    </div>
-  </div>
-
-  <div class="form-group">
-    <input
+      id="reg-confirm"
       type="password"
-      [ngClass]="{
-        'is-invalid':
-          registerForm.get('password').errors &&
-          registerForm.get('password').touched
-      }"
-      class="form-control"
-      formControlName="password"
-      placeholder="Password"
-    />
-    <div
-      class="invalid-feedback"
-      *ngIf="
-        registerForm.get('password').hasError('required') &&
-        registerForm.get('password').touched
-      "
-    >
-      Please Enter a Password
-    </div>
-    <div
-      class="invalid-feedback"
-      *ngIf="
-        registerForm.get('password').hasError('minlength') &&
-        registerForm.get('password').touched
-      "
-    >
-      Please must be atleast 4 characters
-    </div>
-    <div
-      class="invalid-feedback"
-      *ngIf="
-        registerForm.get('password').hasError('maxlength') &&
-        registerForm.get('password').touched
-      "
-    >
-      Password has maximum 8 characters
-    </div>
-  </div>
-
-  <div class="form-group">
-    <input
-      type="password"
-      class="form-control"
-      [ngClass]="{
-        'is-invalid':
-          (registerForm.get('confirmPassword').errors &&
-            registerForm.get('confirmPassword').touched) ||
-          (registerForm.get('confirmPassword').touched &&
-            registerForm.hasError('mismatch'))
-      }"
       formControlName="confirmPassword"
-      placeholder="Confirm Password"
+      autocomplete="new-password"
+      [attr.aria-invalid]="form.controls.confirmPassword.touched && form.hasError('mismatch')"
+      aria-describedby="reg-confirm-error"
     />
-    <div
-      class="invalid-feedback"
-      *ngIf="
-        registerForm.get('confirmPassword').hasError('required') &&
-        registerForm.get('confirmPassword').touched
-      "
-    >
-      Password is required
-    </div>
-    <div
-      class="invalid-feedback"
-      *ngIf="
-        registerForm.hasError('mismatch') &&
-        registerForm.get('confirmPassword').touched
-      "
-    >
-      Passwords must match
-    </div>
+    @if (form.controls.confirmPassword.touched && form.hasError('mismatch')) {
+      <p id="reg-confirm-error" class="field__error">The passwords do not match.</p>
+    }
   </div>
 
-  <div class="form-group text-center">
-    <button
-      class="btn btn-success"
-      [disabled]="!registerForm.valid"
-      type="submit"
-    >
-      Register
+  <div class="register__actions">
+    <button class="btn" type="submit" [disabled]="submitting()">
+      {{ submitting() ? 'Creating…' : 'Create account' }}
     </button>
-    <button class="btn btn-default" type="button" (click)="cancel()">
-      Cancel
-    </button>
-    <button class="btn btn-primary mt-2" (click)="socialSignIn('facebook')">
-      Sign in with Facebook
-    </button>
+    <button class="btn btn--ghost" type="button" (click)="cancelRegister.emit()">Cancel</button>
   </div>
 </form>

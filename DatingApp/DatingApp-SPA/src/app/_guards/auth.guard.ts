@@ -1,25 +1,14 @@
-import { Injectable } from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
+import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../_services/auth.service';
-import { AlertifyService } from '../_services/alertify.service';
+import { ToastService } from '../_services/toast.service';
 
-@Injectable({
-  providedIn: 'root',
-})
-export class AuthGuard implements CanActivate {
-  constructor(
-    private authService: AuthService,
-    private router: Router,
-    private alertify: AlertifyService
-  ) {}
-
-  canActivate(): boolean {
-    if (this.authService.loggedIn()) {
-      return true;
-    }
-
-    this.alertify.error('You shall not pass!!!');
-    this.router.navigate(['/home']);
-    return false;
+export const authGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  if (auth.isLoggedIn()) {
+    return true;
   }
-}
+  auth.logout();
+  inject(ToastService).info('Log in to see members and messages.');
+  return inject(Router).createUrlTree(['/']);
+};

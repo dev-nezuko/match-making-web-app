@@ -1,47 +1,44 @@
-import { Component, OnInit, Input } from '@angular/core';
-import { User } from 'src/app/_models/user';
-import { AuthService } from 'src/app/_services/auth.service';
-import { UserService } from 'src/app/_services/user.service';
-import { AlertifyService } from 'src/app/_services/alertify.service';
+import { Component, inject, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { User } from '../../_models/user';
+import { AvatarComponent } from '../../_shared/avatar.component';
+import { AuthService } from '../../_services/auth.service';
+import { errorMessage } from '../../_services/error-message';
+import { ToastService } from '../../_services/toast.service';
+import { UserService } from '../../_services/user.service';
 
 @Component({
   selector: 'app-member-card',
+  imports: [RouterLink, AvatarComponent],
   templateUrl: './member-card.component.html',
-  styleUrls: ['./member-card.component.css'],
+  styleUrl: './member-card.component.css',
 })
-export class MemberCardComponent implements OnInit {
-  @Input() user: User;
-  constructor(
-    private authService: AuthService,
-    private userService: UserService,
-    private alertify: AlertifyService
-  ) {}
+export class MemberCardComponent {
+  private readonly auth = inject(AuthService);
+  private readonly users = inject(UserService);
+  private readonly toast = inject(ToastService);
 
-  ngOnInit() {}
+  readonly user = input.required<User>();
+  /** Emitted after a like or dislike, so lists can drop or refresh the card. */
+  readonly reacted = output<'like' | 'dislike'>();
 
-  sendLike(id: number) {
-    this.userService
-      .sendLike(this.authService.decodedToken.nameid, id)
-      .subscribe(
-        (data) => {
-          this.alertify.success('You have liked: ' + this.user.knownAs);
-        },
-        (error) => {
-          this.alertify.error(error);
-        }
-      );
+  like(): void {
+    this.users.like(this.auth.userId(), this.user().id).subscribe({
+      next: () => {
+        this.toast.success(`You liked ${this.user().knownAs}.`);
+        this.reacted.emit('like');
+      },
+      error: (error: unknown) => this.toast.error(errorMessage(error)),
+    });
   }
 
-  sendDislike(id: number) {
-    this.userService
-      .sendDislike(this.authService.decodedToken.nameid, id)
-      .subscribe(
-        (data) => {
-          this.alertify.warning('You have Disliked: ' + this.user.knownAs);
-        },
-        (error) => {
-          this.alertify.error(error);
-        }
-      );
+  dislike(): void {
+    this.users.dislike(this.auth.userId(), this.user().id).subscribe({
+      next: () => {
+        this.toast.info(`You passed on ${this.user().knownAs}.`);
+        this.reacted.emit('dislike');
+      },
+      error: (error: unknown) => this.toast.error(errorMessage(error)),
+    });
   }
 }

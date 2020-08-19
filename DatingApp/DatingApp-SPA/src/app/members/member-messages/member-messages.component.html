@@ -1,79 +1,47 @@
-<div class="card">
-  <div class="card-body">
-    <div *ngIf="messages?.length === 0">
-      No messages yet... say hi by using the message box below
-    </div>
+<h2 class="visually-hidden">Messages with {{ recipientName() }}</h2>
 
-    <ul class="chat">
-      <li *ngFor="let message of messages">
-        <!-- to them -->
-        <div *ngIf="message.senderId == recipientId">
-          <span class="chat-img float-left">
-            <img
-              src="{{ message.senderPhotoUrl }}"
-              alt="{{ message.senderKnownAs }}"
-              class="rounded-circle"
-            />
-          </span>
-          <div class="chat-body">
-            <div class="header">
-              <strong class="primary-font">{{ message.senderKnownAs }}</strong>
-              <small class="text-muted float-right">
-                <span class="fa fa-clock-o">{{ message.messageSent }}</span>
-              </small>
-            </div>
-            <p>{{ message.content }}</p>
-          </div>
-        </div>
-
-        <!-- to me -->
-        <div *ngIf="message.senderId != recipientId">
-          <span class="chat-img float-right">
-            <img
-              src="{{ message.senderPhotoUrl }}"
-              alt="{{ message.senderKnownAs }}"
-              class="rounded-circle"
-            />
-          </span>
-          <div class="chat-body">
-            <div class="header">
-              <small class="text-muted">
-                <span class="fa fa-clock-o">{{ message.messageSent }}</span>
-                <span *ngIf="!message.isRead" class="text-danger"
-                  >(unread)</span
-                >
-                <span *ngIf="message.isRead" class="text-success"
-                  >(Read {{ message.dateRead }})</span
-                >
-              </small>
-              <strong class="primary-font float-right">{{
-                message.senderKnownAs
-              }}</strong>
-            </div>
-            <p>{{ message.content }}</p>
-          </div>
-        </div>
-      </li>
-    </ul>
+@if (loading()) {
+  <p class="state" role="status">Loading messages…</p>
+} @else if (error(); as message) {
+  <div class="state state--error" role="alert">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--ghost" (click)="load()">Try again</button>
   </div>
+} @else {
+  @if (messages().length === 0) {
+    <p class="state">No messages yet. Say hello to {{ recipientName() }} below.</p>
+  } @else {
+    <ol class="thread" aria-label="Conversation">
+      @for (message of messages(); track message.id) {
+        <li class="bubble" [class.bubble--mine]="message.senderId === me()">
+          <app-avatar [url]="message.senderPhotoUrl" [name]="message.senderKnownAs" size="sm" [decorative]="true" />
+          <div class="bubble__body">
+            <p class="bubble__meta">
+              <strong>{{ message.senderId === me() ? 'You' : message.senderKnownAs }}</strong>
+              <time [attr.datetime]="message.messageSent">{{ message.messageSent | date: 'd MMM, HH:mm' }}</time>
+              @if (message.senderId === me()) {
+                <span class="bubble__receipt">{{ message.isRead ? 'Read' : 'Not read yet' }}</span>
+              }
+            </p>
+            <p class="bubble__text">{{ message.content }}</p>
+          </div>
+        </li>
+      }
+    </ol>
+  }
 
-  <div class="card-footer">
-    <form #messageForm="ngForm" (ngSubmit)="messageForm.valid && sendMessage()">
-      <div class="input-group">
-        <input
-          type="text"
-          [(ngModel)]="newMessage.content"
-          name="content"
-          required
-          class="form-control input-sm"
-          placeholder="send a private message"
-        />
-        <div class="input-group-append">
-          <button [disabled]="!messageForm.valid" class="btn btn-primary">
-            Send
-          </button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
+  <form class="compose" #composeForm="ngForm" (ngSubmit)="send()">
+    <label class="visually-hidden" for="compose-text">Message to {{ recipientName() }}</label>
+    <input
+      id="compose-text"
+      class="input"
+      name="content"
+      required
+      maxlength="2000"
+      autocomplete="off"
+      [placeholder]="'Write to ' + recipientName()"
+      [(ngModel)]="draft"
+    />
+    <button class="btn btn--sage" type="submit" [disabled]="!composeForm.valid || sending()">Send</button>
+  </form>
+}

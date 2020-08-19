@@ -1,34 +1,11 @@
-import { Component, OnInit } from '@angular/core';
-import { AuthService } from './_services/auth.service';
-import { JwtHelperService } from '@auth0/angular-jwt';
-import { User } from './_models/user';
-import {
-  FacebookLoginProvider,
-  GoogleLoginProvider,
-} from 'angular-6-social-login';
+import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+import { NavComponent } from './nav/nav.component';
+import { ToastOutletComponent } from './_shared/toast-outlet.component';
 
 @Component({
   selector: 'app-root',
+  imports: [RouterOutlet, NavComponent, ToastOutletComponent],
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css'],
 })
-export class AppComponent implements OnInit {
-  jwtHelper = new JwtHelperService();
-  title = 'SocialMediaAuthentication';
-
-  constructor(
-    private authService: AuthService,
-    private socialservice: AuthService
-  ) {}
-  ngOnInit() {
-    const token = localStorage.getItem('token');
-    const user: User = JSON.parse(localStorage.getItem('user'));
-    if (token) {
-      this.authService.decodedToken = this.jwtHelper.decodeToken(token);
-    }
-    if (user) {
-      this.authService.currentUser = user;
-      this.authService.changeMemberPhoto(user.photoUrl);
-    }
-  }
-}
+export class AppComponent {}

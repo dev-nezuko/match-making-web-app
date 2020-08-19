@@ -1,10 +1,125 @@
-.dropdown-toggle,
-.dropdown-item {
+.nav {
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.nav__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  width: min(72rem, 100% - 2rem);
+  margin: 0 auto;
+  padding: 0.75rem 0;
+}
+
+.nav__brand {
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.nav__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  order: 3;
+  width: 100%;
+}
+
+.nav__links a {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.nav__links a:hover {
+  color: var(--ink);
+}
+
+.nav__links a.is-active {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 500;
+}
+
+.nav__account {
+  position: relative;
+  margin-left: auto;
+}
+
+.nav__me {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
   cursor: pointer;
 }
 
-img {
-  max-height: 50px;
-  border: 2px solid white;
-  display: inline;
+.nav__menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 20;
+  min-width: 11rem;
+  padding: 0.4rem;
+  margin: 0;
+  list-style: none;
+}
+
+.nav__menu a,
+.nav__menu button {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nav__menu a:hover,
+.nav__menu button:hover {
+  background: var(--surface-alt);
+}
+
+.nav__login {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.nav__login .input {
+  width: 9.5rem;
+}
+
+@media (min-width: 60rem) {
+  .nav__links {
+    order: 0;
+    width: auto;
+  }
+}
+
+@media (max-width: 30rem) {
+  .nav__login {
+    width: 100%;
+  }
+
+  .nav__login .input {
+    flex: 1 1 8rem;
+    width: auto;
+  }
 }

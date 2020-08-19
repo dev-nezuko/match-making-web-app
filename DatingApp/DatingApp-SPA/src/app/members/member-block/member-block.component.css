@@ -1,0 +1,22 @@
+.blocked {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.blocked__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 0.9rem 1.25rem;
+}
+
+.blocked__row + .blocked__row {
+  border-top: 1px solid var(--line);
+}
+
+.blocked__name {
+  flex: 1;
+  min-width: 10rem;
+}

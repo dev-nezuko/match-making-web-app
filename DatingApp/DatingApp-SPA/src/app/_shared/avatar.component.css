@@ -1,0 +1,42 @@
+:host {
+  display: contents;
+}
+
+.avatar {
+  display: inline-grid;
+  vertical-align: middle;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.avatar--sm {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 0.85rem;
+}
+
+.avatar--md {
+  width: 3.5rem;
+  height: 3.5rem;
+  font-size: 1.2rem;
+}
+
+.avatar--lg {
+  width: 9rem;
+  height: 9rem;
+  font-size: 2.75rem;
+}
+
+.avatar--fill {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  font-size: 3rem;
+}

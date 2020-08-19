@@ -1,84 +1,59 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { Pagination } from '../../_models/pagination';
 import { User } from '../../_models/user';
-import {
-  Pagination,
-  PaginatedResult,
-} from '../../_models/pagination';
+import { AvatarComponent } from '../../_shared/avatar.component';
+import { PagerComponent } from '../../_shared/pager.component';
 import { AuthService } from '../../_services/auth.service';
+import { errorMessage } from '../../_services/error-message';
+import { ToastService } from '../../_services/toast.service';
 import { UserService } from '../../_services/user.service';
-import {
-  ActivatedRoute,
-  Router,
-} from '../../../../node_modules/@angular/router';
-import { AlertifyService } from '../../_services/alertify.service';
-import { Route } from '@angular/compiler/src/core';
+
+const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-member-block',
+  imports: [RouterLink, AvatarComponent, PagerComponent],
   templateUrl: './member-block.component.html',
-  styleUrls: ['./member-block.component.css'],
+  styleUrl: './member-block.component.css',
 })
 export class MemberBlockComponent implements OnInit {
-  users: User[];
-  pagination: Pagination;
-  blockParam: string;
+  private readonly users = inject(UserService);
+  private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
 
-  constructor(
-    private authService: AuthService,
-    private userService: UserService,
-    private route: ActivatedRoute,
-    private alertify: AlertifyService,
-    private router: Router
-  ) {}
+  protected readonly members = signal<User[]>([]);
+  protected readonly pagination = signal<Pagination | null>(null);
+  protected readonly loading = signal(true);
+  protected readonly error = signal<string | null>(null);
 
-  ngOnInit() {
-    this.route.data.subscribe((data) => {
-      this.users = data['users'].result;
-      this.pagination = data['users'].pagination;
+  ngOnInit(): void {
+    this.load(1);
+  }
+
+  load(page = this.pagination()?.currentPage ?? 1): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.users.getUsers(page, PAGE_SIZE, { list: 'blockees' }).subscribe({
+      next: ({ result, pagination }) => {
+        this.members.set(result);
+        this.pagination.set(pagination);
+        this.loading.set(false);
+      },
+      error: (error: unknown) => {
+        this.error.set(errorMessage(error));
+        this.loading.set(false);
+      },
     });
-    this.blockParam = 'blockees';
-    this.loadUsers();
   }
 
-  unblockUser(id: number, name: string) {
-    this.userService
-      .unblock(this.authService.decodedToken.nameid, id)
-      .subscribe(
-        (data) => {
-          this.alertify.success('You have unblocked user ' + name);
-        },
-        (error) => {
-          this.alertify.error(error);
-        }
-      );
-
-    this.router.navigate(['/members']);
-  }
-
-  loadUsers() {
-    console.log('checking params ' + this.blockParam);
-    this.blockParam = 'blockees';
-    this.userService
-      .getUsers(
-        this.pagination.currentPage,
-        this.pagination.itemsPerPage,
-        null,
-        null,
-        this.blockParam
-      )
-      .subscribe(
-        (res: PaginatedResult<User[]>) => {
-          this.users = res.result;
-          this.pagination = res.pagination;
-        },
-        (error) => {
-          this.alertify.error(error);
-        }
-      );
-  }
-
-  pageChanged(event: any): void {
-    this.pagination.currentPage = event.page;
-    this.loadUsers();
+  unblock(member: User): void {
+    this.users.unblock(this.auth.userId(), member.id).subscribe({
+      next: () => {
+        this.members.update((list) => list.filter((m) => m.id !== member.id));
+        this.toast.success(`${member.knownAs} is unblocked.`);
+      },
+      error: (error: unknown) => this.toast.error(errorMessage(error)),
+    });
   }
 }

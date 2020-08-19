@@ -1,24 +1,41 @@
-<div class="container mt-5">
-  <div *ngIf="!registerMode" class="text-center">
-    <h1>Find your match</h1>
-    <p class="lead">
-      Come on in to view your matches... All you need to do is sign up!
-    </p>
-    <div class="text-center">
-      <button class="btn btn-primary btn-lg mr-2" (click)="registerToggle()">
-        Register
-      </button>
-      <button class="btn btn-info btn-lg">Learn More</button>
-    </div>
-  </div>
+<div class="page home">
+  @if (registerMode()) {
+    <section class="home__register card" aria-labelledby="register-title">
+      <app-register (cancelRegister)="registerMode.set(false)" />
+    </section>
+  } @else {
+    <section class="home__intro">
+      <h1>Meet people near you, one profile at a time.</h1>
+      <p class="home__lead">
+        Browse members by age and how recently they were around, like or pass on them, keep a
+        blocked list, and talk in private threads.
+      </p>
+      @if (auth.isLoggedIn()) {
+        <a class="btn" routerLink="/members">See your matches</a>
+      } @else {
+        <div class="home__actions">
+          <button type="button" class="btn" (click)="registerMode.set(true)">Create an account</button>
+        </div>
+        <p class="home__demo">
+          Trying the demo? Log in above as <strong>lola</strong> or <strong>roy</strong> (any seeded
+          member) with the password <code>password</code>.
+        </p>
+      }
+    </section>
 
-  <div *ngIf="registerMode" class="container">
-    <div class="row justify-content-center">
-      <div class="col-4">
-        <app-register
-          (cancelRegister)="cancelRegisterMode($event)"
-        ></app-register>
-      </div>
-    </div>
-  </div>
+    <ul class="home__features" aria-label="What you can do">
+      <li>
+        <h2>Filters that fit</h2>
+        <p>Set an age range and sort by newest members or by who was active last.</p>
+      </li>
+      <li>
+        <h2>Likes both ways</h2>
+        <p>See who liked you, who you liked, and change your mind with a dislike.</p>
+      </li>
+      <li>
+        <h2>Private threads</h2>
+        <p>Read receipts, delete a message for yourself, or for both of you.</p>
+      </li>
+    </ul>
+  }
 </div>

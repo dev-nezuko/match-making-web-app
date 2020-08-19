@@ -1,51 +1,51 @@
-import { Component, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { AvatarComponent } from '../_shared/avatar.component';
 import { AuthService } from '../_services/auth.service';
-import { AlertifyService } from '../_services/alertify.service';
-import { Router } from '@angular/router';
+import { errorMessage } from '../_services/error-message';
+import { ToastService } from '../_services/toast.service';
 
 @Component({
   selector: 'app-nav',
+  imports: [FormsModule, RouterLink, RouterLinkActive, AvatarComponent],
   templateUrl: './nav.component.html',
-  styleUrls: ['./nav.component.css'],
+  styleUrl: './nav.component.css',
 })
-export class NavComponent implements OnInit {
-  model: any = {};
-  photoUrl: string;
+export class NavComponent {
+  protected readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
 
-  constructor(
-    public authService: AuthService,
-    private alertify: AlertifyService,
-    private router: Router
-  ) {}
+  protected readonly credentials = { username: '', password: '' };
+  protected readonly menuOpen = signal(false);
+  protected readonly signingIn = signal(false);
 
-  ngOnInit() {
-    this.authService.currentPhotoUrl.subscribe(
-      (photoUrl) => (this.photoUrl = photoUrl)
-    );
-  }
-
-  login() {
-    this.authService.login(this.model).subscribe(
-      (next) => {
-        this.alertify.success('Logged in successfully');
-      },
-      (error) => {
-        this.alertify.error(error);
-      },
-      () => {
+  login(): void {
+    this.signingIn.set(true);
+    this.auth.login(this.credentials).subscribe({
+      next: (user) => {
+        this.signingIn.set(false);
+        this.credentials.password = '';
+        this.toast.success(`Welcome back, ${user.knownAs}.`);
         this.router.navigate(['/members']);
-      }
-    );
+      },
+      error: (error: unknown) => {
+        this.signingIn.set(false);
+        this.toast.error(
+          error instanceof HttpErrorResponse && error.status === 401
+            ? 'Wrong username or password.'
+            : errorMessage(error),
+        );
+      },
+    });
   }
 
-  loggedIn() {
-    const token = localStorage.getItem('token');
-    return !!token;
-  }
-
-  logout() {
-    localStorage.removeItem('token');
-    this.alertify.message('logged out');
-    this.router.navigate(['/home']);
+  logout(): void {
+    this.menuOpen.set(false);
+    this.auth.logout();
+    this.toast.info('You are logged out.');
+    this.router.navigate(['/']);
   }
 }

@@ -1,0 +1,29 @@
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 2rem 0 1rem;
+}
+
+.pager__page {
+  min-width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pager__page:hover {
+  border-color: var(--accent);
+}
+
+.pager__page--current {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}

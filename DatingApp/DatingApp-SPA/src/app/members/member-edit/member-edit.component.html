@@ -1,105 +1,69 @@
-<div class="container mt-4">
-  <div class="row">
-    <div class="col-sm-4">
-      <h1>Your Profile</h1>
+<div class="page">
+  <header class="page__header">
+    <div>
+      <h1>Your profile</h1>
+      <p>This is what other members see.</p>
     </div>
-    <div class="col-sm-8">
-      <div *ngIf="editForm.dirty" class="alert alert-info">
-        <strong>Information:</strong> You have made changes. Any unsaved changes
-        will be lost!
-      </div>
+    @if (form.dirty) {
+      <p class="edit__unsaved" role="status">You have unsaved changes.</p>
+    }
+  </header>
+
+  @if (loading()) {
+    <p class="state" role="status">Loading your profile…</p>
+  } @else if (error(); as message) {
+    <div class="state state--error" role="alert">
+      <p>{{ message }}</p>
+      <button type="button" class="btn btn--ghost" (click)="load()">Try again</button>
     </div>
-  </div>
-  <div class="row">
-    <div class="col-sm-4">
-      <div class="card">
-        <img
-          class="card-img-top img-thumbnail"
-          src="{{ photoUrl || '../../../../../assets/user.png'"
-          alt="{{ user.knownAs }}"
-        />
-        <div class="card-body">
-          <div>
-            <strong>Location:</strong>
-            <p>{{ user.city }}, {{ user.country }}</p>
-          </div>
-          <div>
-            <strong>Age:</strong>
-            <p>{{ user.age }}</p>
-          </div>
-          <div>
-            <strong>Last Active:</strong>
-            <p>{{ user.lastActive }}</p>
-          </div>
-          <div>
-            <strong>Member Since:</strong>
-            <p>{{ user.created | date: "mediumDate" }}</p>
-          </div>
+  } @else if (member(); as m) {
+    <div class="edit">
+      <aside class="edit__side card">
+        <div class="edit__photo">
+          <app-avatar [url]="auth.photoUrl()" [name]="m.knownAs" size="fill" />
         </div>
-        <div class="card-footer">
-          <button
-            [disabled]="!editForm.dirty"
-            form="editForm"
-            class="btn btn-success btn-block"
-          >
-            Save Changes
+        <div class="edit__facts">
+          <h2>{{ m.knownAs }}, {{ m.age }}</h2>
+          <p>{{ form.controls.city.value }}, {{ form.controls.country.value }}</p>
+          <p class="edit__since">Member since {{ m.created | date: 'MMMM y' }}</p>
+          <button class="btn" type="submit" form="profile-form" [disabled]="!form.dirty || saving()">
+            {{ saving() ? 'Saving…' : 'Save changes' }}
           </button>
         </div>
+      </aside>
+
+      <div class="edit__main">
+        <form id="profile-form" class="card edit__form" [formGroup]="form" (ngSubmit)="save()">
+          <h2>About you</h2>
+          <div class="field">
+            <label for="edit-introduction">Introduction</label>
+            <textarea id="edit-introduction" rows="5" formControlName="introduction"></textarea>
+          </div>
+          <div class="field">
+            <label for="edit-looking-for">Looking for</label>
+            <textarea id="edit-looking-for" rows="4" formControlName="lookingFor"></textarea>
+          </div>
+          <div class="field">
+            <label for="edit-interests">Interests</label>
+            <textarea id="edit-interests" rows="3" formControlName="interests"></textarea>
+          </div>
+          <div class="edit__row">
+            <div class="field">
+              <label for="edit-city">City</label>
+              <input id="edit-city" formControlName="city" autocomplete="address-level2" />
+            </div>
+            <div class="field">
+              <label for="edit-country">Country</label>
+              <input id="edit-country" formControlName="country" autocomplete="country-name" />
+            </div>
+          </div>
+        </form>
+
+        <section class="card edit__photos" aria-labelledby="photos-title">
+          <h2 id="photos-title">Photos</h2>
+          <app-photo-editor [photos]="photos()" (photosChange)="photos.set($event)" />
+        </section>
       </div>
     </div>
-    <div class="col-sm-8">
-      <div class="tab-panel">
-        <tabset class="member-tabset">
-          <tab heading="Edit Profile">
-            <form #editForm="ngForm" id="editForm" (ngSubmit)="updateUser()">
-              <h4>Description</h4>
-              <textarea
-                class="form-control"
-                name="introduction"
-                rows="6"
-                [(ngModel)]="user.introduction"
-              ></textarea>
-              <h4>Looking For</h4>
-              <textarea
-                class="form-control"
-                name="lookingFor"
-                rows="6"
-                [(ngModel)]="user.lookingFor"
-              ></textarea>
-              <h4>Interests</h4>
-              <textarea
-                class="form-control"
-                name="interests"
-                rows="6"
-                [(ngModel)]="user.interests"
-              ></textarea>
-              <h4>Location Details:</h4>
-              <div class="form-inline">
-                <label for="city">City</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  name="city"
-                  [(ngModel)]="user.city"
-                />
-                <label for="country">City</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  name="country"
-                  [(ngModel)]="user.country"
-                />
-              </div>
-            </form>
-          </tab>
-          <tab heading="Edit Photos">
-            <app-photo-editor
-              [photos]="user.photos"
-              (getMemberPhotoChange)="updateMainPhoto($event)"
-            ></app-photo-editor>
-          </tab>
-        </tabset>
-      </div>
-    </div>
-  </div>
+  }
 </div>

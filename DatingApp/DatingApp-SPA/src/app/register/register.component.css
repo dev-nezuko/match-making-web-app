@@ -1,4 +1,22 @@
-.signup {
-  color: blue;
-  cursor: pointer;
+.register__gender {
+  padding: 0;
+  border: 0;
+}
+
+.register__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0 1rem;
+}
+
+.register__hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.register__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }

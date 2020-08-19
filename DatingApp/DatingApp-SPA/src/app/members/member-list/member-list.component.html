@@ -1,103 +1,66 @@
-<div class="text-center mt-3">
-  <h2>Your matches - {{ pagination.totalItems }} found</h2>
-</div>
-
-<div class="container mt-3">
-  <form class="form-inline" #form="ngForm" (ngSubmit)="loadUsers()" novalidate>
-    <div class="form-group">
-      <label for="minAge">Age From</label>
-      <input
-        type="number"
-        class="form-control ml-1"
-        style="width: 70px;"
-        id="minAge"
-        [(ngModel)]="userParams.minAge"
-        name="minAge"
-      />
+<div class="page">
+  <header class="page__header">
+    <div>
+      <h1>Your matches</h1>
+      <p aria-live="polite">
+        @if (pagination(); as p) {
+          {{ p.totalItems }} {{ p.totalItems === 1 ? 'member matches' : 'members match' }} your filters
+        }
+      </p>
     </div>
+  </header>
 
-    <div class="form-group px-2">
-      <label for="maxAge">Age To</label>
-      <input
-        type="number"
-        class="form-control ml-1"
-        style="width: 70px;"
-        id="maxAge"
-        [(ngModel)]="userParams.maxAge"
-        name="maxAge"
-      />
+  <form class="filters card" (ngSubmit)="applyFilters()" aria-label="Filter members">
+    <div class="field">
+      <label for="minAge">Age from</label>
+      <input id="minAge" name="minAge" type="number" min="18" max="99" [(ngModel)]="filters.minAge" />
     </div>
-
-    <div class="form-group px-2">
-      <label for="gender">Show: </label>
-      <select
-        class="form-control ml-1"
-        style="width: 130px;"
-        id="gender"
-        [(ngModel)]="userParams.gender"
-        name="gender"
-      >
-        <option *ngFor="let gender of genderList" [value]="gender.value">
-          {{ gender.display }}
-        </option>
+    <div class="field">
+      <label for="maxAge">to</label>
+      <input id="maxAge" name="maxAge" type="number" min="18" max="99" [(ngModel)]="filters.maxAge" />
+    </div>
+    <div class="field">
+      <label for="gender">Show</label>
+      <select id="gender" name="gender" [(ngModel)]="filters.gender">
+        @for (g of genders; track g.value) {
+          <option [value]="g.value">{{ g.label }}</option>
+        }
       </select>
     </div>
-    <button type="submit" class="btn btn-primary" style="margin-left: 10px;">
-      Apply Filters
-    </button>
-    <button
-      type="button"
-      class="btn btn-info"
-      (click)="resetFilters()"
-      style="margin-left: 10px;"
-    >
-      Reset Filter
-    </button>
-    <div class="col">
-      <div class="btn-group float-right">
-        <button
-          type="button"
-          name="orderBy"
-          class="btn btn-primary"
-          [(ngModel)]="userParams.orderBy"
-          (click)="loadUsers()"
-          btnRadio="lastActive"
-        >
-          Last Active
-        </button>
-        <button
-          type="button"
-          name="orderBy"
-          class="btn btn-primary"
-          [(ngModel)]="userParams.orderBy"
-          (click)="loadUsers()"
-          btnRadio="created"
-        >
-          Newest Members
-        </button>
+    <fieldset class="filters__sort">
+      <legend class="visually-hidden">Sort by</legend>
+      <div class="segmented">
+        <input id="sort-active" type="radio" name="orderBy" value="lastActive" [(ngModel)]="filters.orderBy" (change)="load(1)" />
+        <label for="sort-active">Last active</label>
+        <input id="sort-created" type="radio" name="orderBy" value="created" [(ngModel)]="filters.orderBy" (change)="load(1)" />
+        <label for="sort-created">Newest</label>
       </div>
+    </fieldset>
+    <div class="filters__buttons">
+      <button type="submit" class="btn">Apply</button>
+      <button type="button" class="btn btn--ghost" (click)="resetFilters()">Reset</button>
     </div>
   </form>
-  <br />
 
-  <div class="row">
-    <div *ngFor="let user of users" class="col-lg-2 col-md-3 col-sm-6">
-      <app-member-card [user]="user"></app-member-card>
+  @if (loading()) {
+    <p class="state" role="status">Finding members…</p>
+  } @else if (error(); as message) {
+    <div class="state state--error" role="alert">
+      <p>{{ message }}</p>
+      <button type="button" class="btn btn--ghost" (click)="load()">Try again</button>
     </div>
-  </div>
-</div>
+  } @else if (members().length === 0) {
+    <div class="state">
+      <p>No one matches these filters yet.</p>
+      <button type="button" class="btn btn--ghost" (click)="resetFilters()">Reset filters</button>
+    </div>
+  } @else {
+    <ul class="member-grid">
+      @for (member of members(); track member.id) {
+        <li><app-member-card [user]="member" /></li>
+      }
+    </ul>
+  }
 
-<div class="d-flex justify-content-center">
-  <pagination
-    [boundaryLinks]="true"
-    [totalItems]="pagination.totalItems"
-    [(ngModel)]="pagination.currentPage"
-    [itemsPerPage]="pagination.itemsPerPage"
-    (pageChanged)="pageChanged($event)"
-    previousText="&lsaquo;"
-    nextText="&rsaquo;"
-    firstText="&laquo;"
-    lastText="&raquo;"
-  >
-  </pagination>
+  <app-pager [pagination]="pagination()" (pageChange)="load($event)" />
 </div>

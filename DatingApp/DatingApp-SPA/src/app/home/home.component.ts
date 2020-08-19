@@ -1,22 +1,15 @@
-import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Component, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { AuthService } from '../_services/auth.service';
+import { RegisterComponent } from '../register/register.component';
 
 @Component({
   selector: 'app-home',
+  imports: [RegisterComponent, RouterLink],
   templateUrl: './home.component.html',
-  styleUrls: ['./home.component.css'],
+  styleUrl: './home.component.css',
 })
-export class HomeComponent implements OnInit {
-  registerMode = false;
-  constructor(private http: HttpClient) {}
-
-  ngOnInit(): void {}
-
-  registerToggle() {
-    this.registerMode = true;
-  }
-
-  cancelRegisterMode(registerMode: boolean) {
-    this.registerMode = registerMode;
-  }
+export class HomeComponent {
+  protected readonly auth = inject(AuthService);
+  protected readonly registerMode = signal(false);
 }

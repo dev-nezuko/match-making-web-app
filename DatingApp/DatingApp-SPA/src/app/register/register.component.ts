@@ -1,125 +1,92 @@
-import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
-import { HelperService } from '../_services/helper.service';
-/// <reference path="_services/auth.service.ts" />
-import { AlertifyService } from '../_services/alertify.service';
-
+import { Component, inject, output, signal } from '@angular/core';
 import {
-  FormGroup,
-  FormControl,
-  Validators,
+  AbstractControl,
   FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
 } from '@angular/forms';
-import { BsDatepickerConfig } from 'ngx-bootstrap/datepicker';
-import { User } from '../_models/user';
 import { Router } from '@angular/router';
-import {
-  AuthService,
-  FacebookLoginProvider,
-  GoogleLoginProvider,
-} from 'angular-6-social-login-v2';
+import { switchMap } from 'rxjs';
+import { AuthService } from '../_services/auth.service';
+import { errorMessage } from '../_services/error-message';
+import { ToastService } from '../_services/toast.service';
+
+function passwordsMatch(group: AbstractControl): ValidationErrors | null {
+  return group.get('password')?.value === group.get('confirmPassword')?.value
+    ? null
+    : { mismatch: true };
+}
+
+/** Members must be 18; the API's age filter starts there too. */
+export function adult(control: AbstractControl<string>): ValidationErrors | null {
+  if (!control.value) {
+    return null;
+  }
+  const born = new Date(control.value);
+  const eighteenYearsAgo = new Date();
+  eighteenYearsAgo.setFullYear(eighteenYearsAgo.getFullYear() - 18);
+  return born <= eighteenYearsAgo ? null : { underage: true };
+}
 
 @Component({
   selector: 'app-register',
+  imports: [ReactiveFormsModule],
   templateUrl: './register.component.html',
-  styleUrls: ['./register.component.css'],
+  styleUrl: './register.component.css',
 })
-export class RegisterComponent implements OnInit {
-  @Output() cancelRegister = new EventEmitter();
-  user: User;
-  registerForm: FormGroup;
-  bsConfig: Partial<BsDatepickerConfig>;
+export class RegisterComponent {
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
 
-  constructor(
-    private authService: HelperService,
-    private router: Router,
-    private alertify: AlertifyService,
-    private fb: FormBuilder,
-    private socialAuthService: AuthService
-  ) {}
+  readonly cancelRegister = output();
+  protected readonly submitting = signal(false);
 
-  // tslint:disable-next-line: typedef
-  ngOnInit() {
-    (this.bsConfig = {
-      containerClass: 'theme-red',
-    }),
-      this.createRegisterForm();
+  readonly form = inject(FormBuilder).nonNullable.group(
+    {
+      gender: ['female', Validators.required],
+      username: ['', [Validators.required, Validators.maxLength(32)]],
+      knownAs: ['', Validators.required],
+      dateOfBirth: ['', [Validators.required, adult]],
+      city: ['', Validators.required],
+      country: ['', Validators.required],
+      password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(128)]],
+      confirmPassword: ['', Validators.required],
+    },
+    { validators: passwordsMatch },
+  );
+
+  protected invalid(name: string): boolean {
+    const control = this.form.get(name);
+    return !!control && control.invalid && control.touched;
   }
 
-  createRegisterForm() {
-    this.registerForm = this.fb.group(
-      {
-        gender: ['female'],
-        username: ['', Validators.required],
-        knownAs: ['', Validators.required],
-        dateOfBirth: [new Date(), Validators.required],
-        city: ['Lahore', Validators.required],
-        country: ['Pakistan', Validators.required],
-        password: [
-          'password',
-          [
-            Validators.required,
-            Validators.minLength(4),
-            Validators.maxLength(8),
-          ],
-        ],
-        confirmPassword: ['password', Validators.required],
-      },
-      { validator: this.passwordMatchValidator }
-    );
-  }
-
-  public socialSignIn(socialPlatform: string) {
-    let socialPlatformProvider;
-    if (socialPlatform == 'facebook') {
-      socialPlatformProvider = FacebookLoginProvider.PROVIDER_ID;
-    } else if (socialPlatform == 'google') {
-      socialPlatformProvider = GoogleLoginProvider.PROVIDER_ID;
+  register(): void {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
     }
-
-    this.socialAuthService.signIn(socialPlatformProvider).then((userData) => {
-      this.user = Object.assign({}, this.registerForm.value);
-      console.log(socialPlatform + ' sign in data : ', userData);
-      this.user.username = userData.name;
-      this.user.photoUrl = userData.image;
-      this.user.knownAs = userData.name;
-
-      this.authService.changeMemberPhoto(userData.image);
-      
-      this.authService.register(this.user).subscribe(
-        () => {
-          this.alertify.success('Registeration Successful, login to proceed');
+    const { gender, username, knownAs, dateOfBirth, city, country, password } =
+      this.form.getRawValue();
+    const registration = { gender, username, knownAs, dateOfBirth, city, country, password };
+    this.submitting.set(true);
+    this.auth
+      .register(registration)
+      .pipe(
+        switchMap(() =>
+          this.auth.login({ username: registration.username, password: registration.password }),
+        ),
+      )
+      .subscribe({
+        next: (user) => {
+          this.toast.success(`Welcome, ${user.knownAs}. Your account is ready.`);
+          this.router.navigate(['/members']);
         },
-        (error) => {
-          this.alertify.error(error);
-        }
-      );
-    });
-  }
-  register() {
-    if (this.registerForm.valid) {
-      this.user = Object.assign({}, this.registerForm.value);
-      console.log(this.user);
-      this.authService.register(this.user).subscribe(
-        () => {
-          this.alertify.success('Registeration Successful, login to proceed');
+        error: (error: unknown) => {
+          this.submitting.set(false);
+          this.toast.error(errorMessage(error));
         },
-        (error) => {
-          this.alertify.error(error);
-        }
-      );
-    }
-  }
-
-  passwordMatchValidator(g: FormGroup) {
-    return g.get('password').value === g.get('confirmPassword').value
-      ? null
-      : { mismatch: true };
-  }
-
-  // tslint:disable-next-line: typedef
-
-  // tslint:disable-next-line: typedef
-  cancel() {
-    this.cancelRegister.emit(false);
+      });
   }
 }

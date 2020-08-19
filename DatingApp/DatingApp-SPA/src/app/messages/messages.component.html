@@ -1,104 +1,48 @@
-<div class="container mt-5">
-  <div class="row">
-    <div class="btn-group">
-      <button
-        class="btn btn-primary"
-        [(ngModel)]="messageContainer"
-        btnRadio="Unread"
-        (click)="loadMessages()"
-      >
-        <i class="fa fa-envelope"></i> Unread
-      </button>
-      <button
-        class="btn btn-primary"
-        [(ngModel)]="messageContainer"
-        btnRadio="Inbox"
-        (click)="loadMessages()"
-      >
-        <i class="fa fa-envelope-open"></i> Inbox
-      </button>
-      <button
-        class="btn btn-primary"
-        [(ngModel)]="messageContainer"
-        btnRadio="Outbox"
-        (click)="loadMessages()"
-      >
-        <i class="fa fa-paper-plane"></i> Outbox
-      </button>
+<div class="page">
+  <header class="page__header">
+    <h1>Messages</h1>
+    <fieldset class="segmented" aria-label="Folder">
+      @for (c of containers; track c.id) {
+        <input type="radio" name="container" [id]="'box-' + c.id" [value]="c.id" [checked]="container() === c.id" (change)="show(c.id)" />
+        <label [for]="'box-' + c.id">{{ c.label }}</label>
+      }
+    </fieldset>
+  </header>
+
+  @if (loading()) {
+    <p class="state" role="status">Loading messages…</p>
+  } @else if (error(); as message) {
+    <div class="state state--error" role="alert">
+      <p>{{ message }}</p>
+      <button type="button" class="btn btn--ghost" (click)="load()">Try again</button>
     </div>
-  </div>
-
-  <div class="row" *ngIf="messages.length == 0">
-    <h3>No messages</h3>
-  </div>
-
-  <div class="row" *ngIf="messages.length > 0">
-    <table class="table table-hover" style="cursor: pointer">
-      <tr>
-        <th style="width: 40%">Message</th>
-        <th style="width: 20%">From / To</th>
-        <th style="width: 20%">Sent / Received</th>
-        <th style="width: 20%"></th>
-      </tr>
-      <tr
-        *ngFor="let message of messages"
-        [routerLink]="[
-          '/members',
-          messageContainer == 'Outbox' ? message.recipientId : message.senderId
-        ]"
-        [queryParams]="{ tab: 3 }"
-      >
-        <td>{{ message.content }}</td>
-        <td>
-          <div *ngIf="messageContainer != 'Outbox'">
-            <img
-              src="{{ message?.senderPhotoUrl }}"
-              class="img-circle rounded-circle mr-1"
-            />
-            <strong>{{ message.senderKnownAs }}</strong>
+  } @else if (messages().length === 0) {
+    <p class="state">{{ emptyText() }}</p>
+  } @else {
+    <ul class="inbox card">
+      @for (message of messages(); track message.id) {
+        @let person = other(message);
+        <li class="inbox__row">
+          <app-avatar [url]="person.photoUrl" [name]="person.name" size="md" [decorative]="true" />
+          <a class="inbox__link" [routerLink]="['/members', person.id]" [queryParams]="{ tab: 'messages' }">
+            <span class="inbox__who">
+              <strong>{{ container() === 'Outbox' ? 'To ' : '' }}{{ person.name }}</strong>
+              <time [attr.datetime]="message.messageSent">{{ message.messageSent | date: 'd MMM, HH:mm' }}</time>
+            </span>
+            <span class="inbox__text">{{ message.content }}</span>
+          </a>
+          <div class="inbox__actions">
+            <button type="button" class="btn btn--small btn--ghost" (click)="deleteForMe(message)">Delete for me</button>
+            @if (message.senderId === me()) {
+              <button type="button" class="btn btn--small btn--danger" (click)="deleteForEveryone(message)">
+                Delete for both
+              </button>
+            }
           </div>
-          <div *ngIf="messageContainer == 'Outbox'">
-            <img
-              src="{{ message?.recipientPhotoUrl }}"
-              class="img-circle rounded-circle mr-1"
-            />
-            <strong>{{ message.recipientKnownAs }}</strong>
-          </div>
-        </td>
-        <td>{{ message.messageSent }}</td>
-        <td>
-          <button
-            class="btn btn-danger"
-            (click)="$event.stopPropagation()"
-            (click)="deleteMessage(message.id)"
-          >
-            Delete for me
-          </button>
-          <button
-            [disabled]="!(message.senderId == uId)"
-            class="btn btn-danger mt-2"
-            (click)="$event.stopPropagation()"
-            (click)="deleteMessages(message.id)"
-          >
-            Delete for everyone
-          </button>
-        </td>
-      </tr>
-    </table>
-  </div>
-</div>
+        </li>
+      }
+    </ul>
+  }
 
-<div class="d-flex justify-content-center">
-  <pagination
-    [boundaryLinks]="true"
-    [totalItems]="pagination.totalItems"
-    [itemsPerPage]="pagination.itemsPerPage"
-    [(ngModel)]="pagination.currentPage"
-    (pageChanged)="pageChanged($event)"
-    previousText="&lsaquo;"
-    nextText="&rsaquo;"
-    firstText="&laquo;"
-    lastText="&raquo;"
-  >
-  </pagination>
+  <app-pager [pagination]="pagination()" (pageChange)="load($event)" />
 </div>

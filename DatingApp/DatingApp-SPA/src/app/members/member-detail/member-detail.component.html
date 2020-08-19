@@ -1,108 +1,90 @@
-<script>
-  function initMap() {
-    console.log("lib loaded");
-  }
-</script>
-
-<div class="container mt-4">
-  <div class="row">
-    <h1>{{ user.knownAs }}'s Profile</h1>
-  </div>
-  <div class="row">
-    <div class="col-sm-4">
-      <div class="card">
-        <img
-          class="card-img-top img-thumbnail"
-          src="{{ user.photoUrl || '../../../../../assets/user.png' }}"
-          alt="{{ user.knownAs }}"
-        />
-        <div class="card-body">
-          <div>
-            <strong>Location:</strong>
-
-            <p>{{ user.city }}, {{ user.country }}</p>
-          </div>
-          <button
-            type="button"
-            class="btn btn-primary w-100 md-2"
-            (click)="openModal(template)"
-          >
-            View on map
-          </button>
-
-          <ng-template #template>
-            <div class="modal-header">
-              <h4 class="modal-title pull-left">
-                {{ user.knownAs }}'s Location
-              </h4>
-              <button
-                type="button"
-                class="close pull-right"
-                aria-label="Close"
-                (click)="modalRef.hide()"
-              >
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <div class="modal-body">
-              <agm-map [latitude]="lat" [longitude]="lng">
-                <agm-marker [latitude]="lat" [longitude]="lng"></agm-marker>
-              </agm-map>
-            </div>
-          </ng-template>
-          <div>
-            <strong>Age:</strong>
-            <p>{{ user.age }}</p>
-          </div>
-          <div>
-            <strong>Last Active:</strong>
-            <p>{{ user.lastActive }}</p>
-          </div>
-          <div>
-            <strong>Member Since:</strong>
-            <p>{{ user.created | date: "mediumDate" }}</p>
+<div class="page">
+  @if (loading()) {
+    <p class="state" role="status">Loading profile…</p>
+  } @else if (error(); as message) {
+    <div class="state state--error" role="alert">
+      <p>{{ message }}</p>
+      <button type="button" class="btn btn--ghost" (click)="reload()">Try again</button>
+    </div>
+  } @else if (member(); as m) {
+    <div class="profile">
+      <aside class="profile__side card">
+        <div class="profile__photo">
+          <app-avatar [url]="m.photoUrl" [name]="m.knownAs" size="fill" />
+        </div>
+        <div class="profile__facts">
+          <h1>{{ m.knownAs }}, {{ m.age }}</h1>
+          <dl>
+            <dt>Lives in</dt>
+            <dd>{{ m.city }}, {{ m.country }}</dd>
+            <dt>Last active</dt>
+            <dd>{{ m.lastActive | date: 'd MMM y, HH:mm' }}</dd>
+            <dt>Member since</dt>
+            <dd>{{ m.created | date: 'MMMM y' }}</dd>
+          </dl>
+          <div class="profile__actions">
+            <button type="button" class="btn btn--sage" (click)="selectTab('messages')">Message</button>
+            <button type="button" class="btn btn--danger" (click)="block()">Block</button>
           </div>
         </div>
-        <div class="card-footer">
-          <div class="btn-group d-flex">
-            <button class="btn btn-success w-100" (click)="selectTab(3)">
-              Message
-            </button>
+      </aside>
+
+      <section class="profile__main card">
+        <div class="tabs" role="tablist" aria-label="Profile sections">
+          @for (t of tabs; track t.id; let i = $index) {
             <button
-              class="btn btn-danger w-100 nav-link"
-              (click)="blockUser(user.id)"
+              type="button"
+              role="tab"
+              class="tabs__tab"
+              [id]="'tab-' + t.id"
+              [attr.aria-selected]="activeTab() === t.id"
+              [attr.aria-controls]="'panel-' + t.id"
+              [attr.tabindex]="activeTab() === t.id ? 0 : -1"
+              (click)="selectTab(t.id)"
+              (keydown)="onTabKey($event, i)"
             >
-              Block User
+              {{ t.label }}
             </button>
-          </div>
+          }
         </div>
-      </div>
+
+        <div class="tabs__panel" role="tabpanel" [id]="'panel-' + activeTab()" [attr.aria-labelledby]="'tab-' + activeTab()">
+          @switch (activeTab()) {
+            @case ('about') {
+              <h2>About {{ m.knownAs }}</h2>
+              <p>{{ m.introduction || m.knownAs + ' has not written an introduction yet.' }}</p>
+              <h2>Looking for</h2>
+              <p>{{ m.lookingFor || 'Not said yet.' }}</p>
+            }
+            @case ('interests') {
+              <h2>Interests</h2>
+              <p>{{ m.interests || 'Not said yet.' }}</p>
+            }
+            @case ('photos') {
+              <h2>Photos</h2>
+              @if (m.photos?.length) {
+                <ul class="gallery">
+                  @for (photo of m.photos; track photo.id) {
+                    <li>
+                      <figure>
+                        <img [src]="photo.url" [alt]="photo.description || 'Photo of ' + m.knownAs" loading="lazy" />
+                        @if (photo.description) {
+                          <figcaption>{{ photo.description }}</figcaption>
+                        }
+                      </figure>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="state">No photos yet.</p>
+              }
+            }
+            @case ('messages') {
+              <app-member-messages [recipientId]="m.id" [recipientName]="m.knownAs" />
+            }
+          }
+        </div>
+      </section>
     </div>
-    <div class="col-sm-8">
-      <div class="tab-panel">
-        <tabset class="member-tabset" #memberTabs>
-          <tab heading="About {{ user.knownAs }}">
-            <h4>Description</h4>
-            <p>{{ user.introduction }}</p>
-            <h4>Looking For</h4>
-            <p>{{ user.lookingFor }}</p>
-          </tab>
-          <tab heading="Interests">
-            <h4>Interests</h4>
-            <p>{{ user.interests }}</p>
-          </tab>
-          <tab heading="Photos">
-            <ngx-gallery
-              [options]="galleryOptions"
-              [images]="galleryImages"
-              class="ngx-gallery"
-            ></ngx-gallery>
-          </tab>
-          <tab heading="Messages">
-            <app-member-messages [recipientId]="user.id"> </app-member-messages>
-          </tab>
-        </tabset>
-      </div>
-    </div>
-  </div>
+  }
 </div>

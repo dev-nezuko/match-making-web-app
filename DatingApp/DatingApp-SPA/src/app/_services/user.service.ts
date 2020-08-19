@@ -1,191 +1,132 @@
-import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { PaginatedResult } from '../_models/pagination';
-import { Observable } from 'rxjs';
-import { User } from '../_models/user';
-import { identifierModuleUrl } from '@angular/compiler';
-import { Message } from '../_models/message';
-import { map } from 'rxjs/operators';
+import { Message, MessageContainer } from '../_models/message';
+import { PaginatedResult, Pagination } from '../_models/pagination';
+import { Photo } from '../_models/photo';
+import { ProfileUpdate, User } from '../_models/user';
 
-@Injectable({
-  providedIn: 'root',
-})
+export interface MemberFilters {
+  minAge: number;
+  maxAge: number;
+  gender: string;
+  orderBy: 'lastActive' | 'created';
+}
+
+/** The API's relationship lists: who liked/disliked whom, and who I blocked. */
+export type MemberList = 'likers' | 'likees' | 'dislikers' | 'dislikees' | 'blockees';
+
+function toPaginated<T>(response: HttpResponse<T>): PaginatedResult<T> {
+  const header = response.headers.get('Pagination');
+  return {
+    result: response.body as T,
+    pagination: header ? (JSON.parse(header) as Pagination) : null,
+  };
+}
+
+@Injectable({ providedIn: 'root' })
 export class UserService {
-  baseUrl = environment.apiUrl;
-
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = environment.apiUrl;
 
   getUsers(
-    page?,
-    itemsPerPage?,
-    userParams?,
-    likesParam?,
-    blockParam?
+    page: number,
+    pageSize: number,
+    options: { filters?: MemberFilters; list?: MemberList } = {},
   ): Observable<PaginatedResult<User[]>> {
-    const paginatedResult: PaginatedResult<User[]> = new PaginatedResult<
-      User[]
-    >();
-
-    let params = new HttpParams();
-    console.log('user service got ' + blockParam);
-
-    if (page != null && itemsPerPage != null) {
-      params = params.append('pageNumber', page);
-      params = params.append('pageSize', itemsPerPage);
+    let params = new HttpParams().set('pageNumber', page).set('pageSize', pageSize);
+    const { filters, list } = options;
+    if (filters) {
+      params = params
+        .set('minAge', filters.minAge)
+        .set('maxAge', filters.maxAge)
+        .set('gender', filters.gender)
+        .set('orderBy', filters.orderBy);
     }
-
-    if (userParams != null) {
-      params = params.append('minAge', userParams.minAge);
-      params = params.append('maxAge', userParams.maxAge);
-      params = params.append('gender', userParams.gender);
-      params = params.append('orderBy', userParams.orderBy);
+    if (list) {
+      params = params.set(list, true);
     }
-    if (likesParam === 'Likers') {
-      params = params.append('Likers', 'true');
-    }
-
-    if (likesParam === 'Likees') {
-      console.log('user service is working likes');
-      params = params.append('Likees', 'true');
-    }
-    if (likesParam === 'Dislikers') {
-      params = params.append('Dislikers', 'true');
-    }
-
-    if (likesParam === 'Dislikees') {
-      params = params.append('Dislikees', 'true');
-    }
-
-    if (blockParam === 'blockees') {
-      console.log('user service is working');
-      params = params.append('blockees', 'true');
-    }
-
     return this.http
       .get<User[]>(this.baseUrl + 'users', { observe: 'response', params })
-      .pipe(
-        map((response) => {
-          paginatedResult.result = response.body;
-          if (response.headers.get('Pagination') != null) {
-            paginatedResult.pagination = JSON.parse(
-              response.headers.get('Pagination')
-            );
-          }
-          return paginatedResult;
-        })
-      );
+      .pipe(map(toPaginated));
   }
 
-  getUser(id): Observable<User> {
-    return this.http.get<User>(this.baseUrl + 'users/' + id);
+  getUser(id: number): Observable<User> {
+    return this.http.get<User>(`${this.baseUrl}users/${id}`);
   }
 
-  updateUser(id: number, user: User) {
-    return this.http.put(this.baseUrl + 'users/' + id, user);
+  updateUser(id: number, update: ProfileUpdate): Observable<void> {
+    return this.http.put<void>(`${this.baseUrl}users/${id}`, update);
   }
 
-  setMainPhoto(userId: number, id: number) {
-    return this.http.post(
-      this.baseUrl + 'users/' + userId + '/photos/' + id + '/set',
-      {}
-    );
+  uploadPhoto(userId: number, file: File): Observable<Photo> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<Photo>(`${this.baseUrl}users/${userId}/photos`, form);
   }
 
-  deletePhoto(userId: number, id: number) {
-    return this.http.delete(this.baseUrl + 'users/' + userId + '/photos/' + id);
+  setMainPhoto(userId: number, photoId: number): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}users/${userId}/photos/${photoId}/set`, {});
   }
 
-  sendLike(id: number, recepientId: number) {
-    return this.http.post(
-      this.baseUrl + 'users/' + id + '/like/' + recepientId,
-      {}
-    );
+  deletePhoto(userId: number, photoId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}users/${userId}/photos/${photoId}`);
   }
 
-  unblock(id: number, recepientId: number) {
-    return this.http.post(
-      this.baseUrl + 'users/' + id + '/unblock/' + recepientId,
-      {}
-    );
-  }
-  sendDislike(id: number, recepientId: number) {
-    return this.http.post(
-      this.baseUrl + 'users/' + id + '/dislike/' + recepientId,
-      {}
-    );
+  like(userId: number, recipientId: number): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}users/${userId}/like/${recipientId}`, {});
   }
 
-  getMessages(id: number, page?, itemsPerPage?, messageContainer?) {
-    const paginatedResult: PaginatedResult<Message[]> = new PaginatedResult<
-      Message[]
-    >();
+  dislike(userId: number, recipientId: number): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}users/${userId}/dislike/${recipientId}`, {});
+  }
 
-    let params = new HttpParams();
+  block(userId: number, recipientId: number): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}users/${userId}/block/${recipientId}`, {});
+  }
 
-    params = params.append('MessageContainer', messageContainer);
+  unblock(userId: number, recipientId: number): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}users/${userId}/unblock/${recipientId}`, {});
+  }
 
-    if (page != null && itemsPerPage != null) {
-      params = params.append('pageNumber', page);
-      params = params.append('pageSize', itemsPerPage);
-    }
-
+  getMessages(
+    userId: number,
+    page: number,
+    pageSize: number,
+    container: MessageContainer,
+  ): Observable<PaginatedResult<Message[]>> {
+    const params = new HttpParams()
+      .set('messageContainer', container)
+      .set('pageNumber', page)
+      .set('pageSize', pageSize);
     return this.http
-      .get<Message[]>(this.baseUrl + 'users/' + id + '/messages', {
-        observe: 'response',
-        params,
-      })
-      .pipe(
-        map((response) => {
-          paginatedResult.result = response.body;
-          if (response.headers.get('Pagination') !== null) {
-            paginatedResult.pagination = JSON.parse(
-              response.headers.get('Pagination')
-            );
-          }
-
-          return paginatedResult;
-        })
-      );
+      .get<Message[]>(`${this.baseUrl}users/${userId}/messages`, { observe: 'response', params })
+      .pipe(map(toPaginated));
   }
 
-  getMessageThread(id: number, recipientId: number) {
+  getMessageThread(userId: number, recipientId: number): Observable<Message[]> {
     return this.http.get<Message[]>(
-      this.baseUrl + 'users/' + id + '/messages/thread/' + recipientId
+      `${this.baseUrl}users/${userId}/messages/thread/${recipientId}`,
     );
   }
 
-  sendMessage(id: number, message: Message) {
-    return this.http.post(this.baseUrl + 'users/' + id + '/messages', message);
+  sendMessage(userId: number, recipientId: number, content: string): Observable<Message> {
+    return this.http.post<Message>(`${this.baseUrl}users/${userId}/messages`, {
+      recipientId,
+      content,
+    });
   }
 
-  deleteMessage(id: number, userId: number) {
-    return this.http.post(
-      this.baseUrl + 'users/' + userId + '/messages/' + id,
-      {}
-    );
+  deleteMessage(userId: number, messageId: number): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}users/${userId}/messages/${messageId}`, {});
   }
 
-  deleteMessages(id: number, userId: number) {
-    return this.http.post(
-      this.baseUrl + 'users/' + userId + '/messages/' + id + '/both',
-      {}
-    );
+  deleteMessageForEveryone(userId: number, messageId: number): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}users/${userId}/messages/${messageId}/both`, {});
   }
 
-  blockUser(id: number, recepientId: number) {
-    return this.http.post(
-      this.baseUrl + 'users/' + id + '/block/' + recepientId,
-      {}
-    );
-  }
-
-  markAsRead(userId: number, messageId: number) {
-    this.http
-      .post(
-        this.baseUrl + 'users/' + userId + '/messages/' + messageId + '/read',
-        {}
-      )
-      .subscribe();
+  markAsRead(userId: number, messageId: number): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}users/${userId}/messages/${messageId}/read`, {});
   }
 }

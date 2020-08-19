@@ -1,112 +1,91 @@
-import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
+import { Component, inject, input, output, signal } from '@angular/core';
 import { Photo } from '../../_models/photo';
-import { FileUploader } from 'ng2-file-upload';
-import { environment } from 'src/environments/environment';
 import { AuthService } from '../../_services/auth.service';
+import { errorMessage } from '../../_services/error-message';
+import { ToastService } from '../../_services/toast.service';
 import { UserService } from '../../_services/user.service';
-import { AlertifyService } from '../../_services/alertify.service';
+
+const MAX_BYTES = 10 * 1024 * 1024;
 
 @Component({
   selector: 'app-photo-editor',
   templateUrl: './photo-editor.component.html',
-  styleUrls: ['./photo-editor.component.scss'],
+  styleUrl: './photo-editor.component.css',
 })
-export class PhotoEditorComponent implements OnInit {
-  @Input() photos: Photo[];
-  @Output() getMemberPhotoChange = new EventEmitter<string>();
-  uploader: FileUploader;
-  hasBaseDropZoneOver = false;
-  baseUrl = environment.apiUrl;
-  currentMain: Photo;
+export class PhotoEditorComponent {
+  private readonly users = inject(UserService);
+  private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
 
-  constructor(
-    private authService: AuthService,
-    private userService: UserService,
-    private alertify: AlertifyService
-  ) {}
+  readonly photos = input.required<Photo[]>();
+  readonly photosChange = output<Photo[]>();
 
-  ngOnInit() {
-    this.initializeUploader();
+  protected readonly uploading = signal(false);
+  protected readonly dragging = signal(false);
+
+  onFilesChosen(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.upload(Array.from(input.files ?? []));
+    input.value = '';
   }
 
-  fileOverBase(e: any): void {
-    this.hasBaseDropZoneOver = e;
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.dragging.set(false);
+    this.upload(Array.from(event.dataTransfer?.files ?? []));
   }
-  initializeUploader() {
-    this.uploader = new FileUploader({
-      url:
-        this.baseUrl +
-        'users/' +
-        this.authService.decodedToken.nameid +
-        '/photos',
-      authToken: 'Bearer ' + localStorage.getItem('token'),
-      allowedFileType: ['image'],
-      removeAfterUpload: true,
-      autoUpload: false,
-      maxFileSize: 10 * 1024 * 1024,
-    });
 
-    this.uploader.onBeforeUploadItem = (item) => {
-      item.withCredentials = false;
-    };
-    this.uploader.onSuccessItem = (item, response, status, headers) => {
-      if (response) {
-        const res: Photo = JSON.parse(response);
-        const photo = {
-          id: res.id,
-          url: res.url,
-          dateAdded: res.dateAdded,
-          description: res.description,
-          isMain: res.isMain,
-        };
-        this.photos.push(photo);
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.dragging.set(true);
+  }
+
+  private upload(files: File[]): void {
+    const images = files.filter((f) => f.type.startsWith('image/') && f.size <= MAX_BYTES);
+    if (images.length < files.length) {
+      this.toast.error('Only images up to 10 MB can be uploaded.');
+    }
+    const [next, ...rest] = images;
+    if (!next) {
+      return;
+    }
+    this.uploading.set(true);
+    this.users.uploadPhoto(this.auth.userId(), next).subscribe({
+      next: (photo) => {
+        this.photosChange.emit([...this.photos(), photo]);
         if (photo.isMain) {
-          this.authService.changeMemberPhoto(photo.url);
-          this.authService.currentUser.photoUrl = photo.url;
-          localStorage.setItem(
-            'user',
-            JSON.stringify(this.authService.currentUser)
-          );
+          this.auth.changeMainPhoto(photo.url);
         }
-      }
-    };
+        this.uploading.set(false);
+        this.upload(rest);
+      },
+      error: (error: unknown) => {
+        this.uploading.set(false);
+        this.toast.error(errorMessage(error));
+      },
+    });
   }
-  setMainPhoto(photo: Photo) {
-    this.userService
-      .setMainPhoto(this.authService.decodedToken.nameid, photo.id)
-      .subscribe(
-        () => {
-          this.currentMain = this.photos.filter((p) => p.isMain === true)[0];
-          this.currentMain.isMain = false;
-          photo.isMain = true;
-          this.authService.changeMemberPhoto(photo.url);
-          this.authService.currentUser.photoUrl = photo.url;
-          localStorage.setItem(
-            'user',
-            JSON.stringify(this.authService.currentUser)
-          );
-        },
-        (error) => {
-          this.alertify.error(error);
-        }
-      );
+
+  setMain(photo: Photo): void {
+    this.users.setMainPhoto(this.auth.userId(), photo.id).subscribe({
+      next: () => {
+        this.photosChange.emit(this.photos().map((p) => ({ ...p, isMain: p.id === photo.id })));
+        this.auth.changeMainPhoto(photo.url);
+      },
+      error: (error: unknown) => this.toast.error(errorMessage(error)),
+    });
   }
-  deletePhoto(id: number) {
-    this.alertify.confirm('Are you sure you want to delete this photo?', () => {
-      this.userService
-        .deletePhoto(this.authService.decodedToken.nameid, id)
-        .subscribe(
-          () => {
-            this.photos.splice(
-              this.photos.findIndex((p) => p.id === id),
-              1
-            );
-            this.alertify.success('Photo has been deleted');
-          },
-          (error) => {
-            this.alertify.error('Failed to delete the photo');
-          }
-        );
+
+  remove(photo: Photo): void {
+    if (!confirm('Delete this photo?')) {
+      return;
+    }
+    this.users.deletePhoto(this.auth.userId(), photo.id).subscribe({
+      next: () => {
+        this.photosChange.emit(this.photos().filter((p) => p.id !== photo.id));
+        this.toast.success('Photo deleted.');
+      },
+      error: (error: unknown) => this.toast.error(errorMessage(error)),
     });
   }
 }

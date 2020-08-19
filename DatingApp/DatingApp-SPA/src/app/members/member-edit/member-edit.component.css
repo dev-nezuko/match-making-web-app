@@ -1,0 +1,52 @@
+.edit {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 52rem) {
+  .edit {
+    grid-template-columns: 18rem 1fr;
+  }
+}
+
+.edit__side {
+  overflow: hidden;
+}
+
+.edit__photo {
+  aspect-ratio: 1;
+  background: var(--accent-soft);
+}
+
+.edit__facts {
+  padding: 1.25rem;
+}
+
+.edit__since {
+  color: var(--muted);
+}
+
+.edit__unsaved {
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.edit__main {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.edit__form,
+.edit__photos {
+  padding: 1.25rem 1.5rem;
+}
+
+.edit__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0 1rem;
+}

@@ -1,68 +1,63 @@
-<nav class="navbar navbar-expand-md navbar-dark bg-primary">
-  <div class="container">
-    <a class="navbar-brand" [routerLink]="['/home']">Dating App</a>
+<header class="nav">
+  <div class="nav__inner">
+    <a class="nav__brand" routerLink="/">DatingApp</a>
 
-    <ul *ngIf="loggedIn()" class="navbar-nav mr-auto">
-      <li class="nav-item" routerLinkActive="active">
-        <a class="nav-link" [routerLink]="['/members']">Matches</a>
-      </li>
-      <li class="nav-item" routerLinkActive=" active">
-        <a class="nav-link" [routerLink]="['/lists']">Lists</a>
-      </li>
-      <li class="nav-item" routerLinkActive=" active">
-        <a class="nav-link" [routerLink]="['/messages']">Messages</a>
-      </li>
-      <li class="nav-item" routerLinkActive=" active">
-        <a class="nav-link" [routerLink]="['/usersBlocked']">Users Blocked</a>
-      </li>
-    </ul>
-    <div *ngIf="loggedIn()" class="dropdown" dropdown>
-      <span class="mr-1">
-        <img src="{{ photoUrl || '../../../../assets/user.png' }}" alt="" />
-      </span>
-      <a class="dropdown-toggle text-light" dropdownToggle>
-        Welcome {{ authService.decodedToken?.unique_name | titlecase }}
-      </a>
+    @if (auth.isLoggedIn()) {
+      <nav class="nav__links" aria-label="Main">
+        <a routerLink="/members" routerLinkActive="is-active">Matches</a>
+        <a routerLink="/lists" routerLinkActive="is-active">Likes</a>
+        <a routerLink="/messages" routerLinkActive="is-active">Messages</a>
+        <a routerLink="/blocked" routerLinkActive="is-active">Blocked</a>
+      </nav>
 
-      <div class="dropdown-menu mt-3" *dropdownMenu>
-        <a class="dropdown-item" [routerLink]="['/member/edit']">
-          <i class="fa fa-user"></i> Edit Profile</a
+      <div class="nav__account">
+        <button
+          type="button"
+          class="nav__me"
+          aria-haspopup="true"
+          [attr.aria-expanded]="menuOpen()"
+          aria-controls="account-menu"
+          (click)="menuOpen.set(!menuOpen())"
         >
-        <div class="dropdown-divider"></div>
-        <a class="dropdown-item" (click)="logout()"
-          ><i class="fa fa-sign-out"></i>Logout</a
-        >
+          <app-avatar [url]="auth.photoUrl()" [name]="auth.displayName()" size="sm" [decorative]="true" />
+          <span>{{ auth.displayName() }}</span>
+        </button>
+        @if (menuOpen()) {
+          <ul id="account-menu" class="nav__menu card">
+            <li>
+              <a routerLink="/member/edit" (click)="menuOpen.set(false)">Edit profile</a>
+            </li>
+            <li><button type="button" (click)="logout()">Log out</button></li>
+          </ul>
+        }
       </div>
-    </div>
-    <form
-      *ngIf="!loggedIn()"
-      #loginForm="ngForm"
-      class="form-inline my-2 my-lg-0"
-      (ngSubmit)="login()"
-    >
-      <input
-        class="form-control mr-sm-2"
-        type="text"
-        name="username"
-        placeholder="Username"
-        required
-        [(ngModel)]="model.username"
-      />
-      <input
-        class="form-control mr-sm-2"
-        type="password"
-        name="password"
-        placeholder="Password"
-        required
-        [(ngModel)]="model.password"
-      />
-      <button
-        [disabled]="!loginForm.valid"
-        class="btn btn-success my-2 my-sm-0"
-        type="submit"
-      >
-        Login
-      </button>
-    </form>
+    } @else {
+      <form class="nav__login" #loginForm="ngForm" (ngSubmit)="login()">
+        <label class="visually-hidden" for="nav-username">Username</label>
+        <input
+          id="nav-username"
+          class="input"
+          name="username"
+          placeholder="Username"
+          autocomplete="username"
+          required
+          [(ngModel)]="credentials.username"
+        />
+        <label class="visually-hidden" for="nav-password">Password</label>
+        <input
+          id="nav-password"
+          class="input"
+          type="password"
+          name="password"
+          placeholder="Password"
+          autocomplete="current-password"
+          required
+          [(ngModel)]="credentials.password"
+        />
+        <button class="btn btn--sage" type="submit" [disabled]="!loginForm.valid || signingIn()">
+          {{ signingIn() ? 'Logging in…' : 'Log in' }}
+        </button>
+      </form>
+    }
   </div>
-</nav>
+</header>

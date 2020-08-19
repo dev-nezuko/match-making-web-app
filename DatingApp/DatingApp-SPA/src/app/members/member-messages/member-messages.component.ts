@@ -1,68 +1,75 @@
-import { Component, OnInit, Input } from '@angular/core';
-import { Message } from 'src/app/_models/message';
-import { UserService } from 'src/app/_services/user.service';
-import { AuthService } from 'src/app/_services/auth.service';
-import { AlertifyService } from 'src/app/_services/alertify.service';
-import { tap } from 'rxjs/operators';
+import { DatePipe } from '@angular/common';
+import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Message } from '../../_models/message';
+import { AvatarComponent } from '../../_shared/avatar.component';
+import { AuthService } from '../../_services/auth.service';
+import { errorMessage } from '../../_services/error-message';
+import { ToastService } from '../../_services/toast.service';
+import { UserService } from '../../_services/user.service';
 
 @Component({
   selector: 'app-member-messages',
+  imports: [DatePipe, FormsModule, AvatarComponent],
   templateUrl: './member-messages.component.html',
-  styleUrls: ['./member-messages.component.scss'],
+  styleUrl: './member-messages.component.css',
 })
 export class MemberMessagesComponent implements OnInit {
-  @Input() recipientId: number;
-  messages: Message[];
-  newMessage: any = {};
+  private readonly users = inject(UserService);
+  private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
 
-  constructor(
-    private userService: UserService,
-    private authService: AuthService,
-    private alertify: AlertifyService
-  ) {}
+  readonly recipientId = input.required<number>();
+  readonly recipientName = input.required<string>();
 
-  ngOnInit() {
-    this.loadMessages();
+  /** Newest first, as the API returns them. */
+  private readonly thread = signal<Message[]>([]);
+  protected readonly messages = computed(() => [...this.thread()].reverse());
+  protected readonly loading = signal(true);
+  protected readonly error = signal<string | null>(null);
+  protected readonly sending = signal(false);
+  protected draft = '';
+  protected readonly me = this.auth.userId;
+
+  ngOnInit(): void {
+    this.load();
   }
 
-  loadMessages() {
-    const currentUserId = +this.authService.decodedToken.nameid;
-    this.userService
-      .getMessageThread(this.authService.decodedToken.nameid, this.recipientId)
-      .pipe(
-        tap((messages) => {
-          for (let i = 0; i < messages.length; i++) {
-            if (
-              messages[i].isRead === false &&
-              messages[i].recipientId === currentUserId
-            ) {
-              this.userService.markAsRead(currentUserId, messages[i].id);
-            }
-          }
-        })
-      )
-      .subscribe(
-        (messages) => {
-          this.messages = messages;
-        },
-        (error) => {
-          this.alertify.error(error);
-        }
-      );
+  load(): void {
+    const me = this.me();
+    this.loading.set(true);
+    this.error.set(null);
+    this.users.getMessageThread(me, this.recipientId()).subscribe({
+      next: (messages) => {
+        this.thread.set(messages);
+        this.loading.set(false);
+        messages
+          .filter((m) => !m.isRead && m.recipientId === me)
+          .forEach((m) => this.users.markAsRead(me, m.id).subscribe());
+      },
+      error: (error: unknown) => {
+        this.error.set(errorMessage(error));
+        this.loading.set(false);
+      },
+    });
   }
 
-  sendMessage() {
-    this.newMessage.recipientId = this.recipientId;
-    this.userService
-      .sendMessage(this.authService.decodedToken.nameid, this.newMessage)
-      .subscribe(
-        (message: Message) => {
-          this.messages.unshift(message);
-          this.newMessage.content = '';
-        },
-        (error) => {
-          this.alertify.error(error);
-        }
-      );
+  send(): void {
+    const content = this.draft.trim();
+    if (!content) {
+      return;
+    }
+    this.sending.set(true);
+    this.users.sendMessage(this.me(), this.recipientId(), content).subscribe({
+      next: (message) => {
+        this.thread.update((list) => [message, ...list]);
+        this.draft = '';
+        this.sending.set(false);
+      },
+      error: (error: unknown) => {
+        this.sending.set(false);
+        this.toast.error(errorMessage(error));
+      },
+    });
   }
 }
