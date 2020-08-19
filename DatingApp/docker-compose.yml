@@ -2,10 +2,14 @@ services:
   api:
     build: ./DatingApp.API
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__DefaultConnection: "Data Source=/data/datingapp.db"
       # ASP.NET Core maps __ onto the : in a config key.
       AppSettings__Token: "${APP_TOKEN_KEY:?Set APP_TOKEN_KEY in DatingApp/.env (see .env.example)}"
+      # Optional: photo uploads answer 503 until these are set.
+      CloudinarySettings__CloudName: "${CLOUDINARY_CLOUD_NAME:-}"
+      CloudinarySettings__ApiKey: "${CLOUDINARY_API_KEY:-}"
+      CloudinarySettings__ApiSecret: "${CLOUDINARY_API_SECRET:-}"
     volumes:
       - api-data:/data
     ports: ["5050:5000"]
