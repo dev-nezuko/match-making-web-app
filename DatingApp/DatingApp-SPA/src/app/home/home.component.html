@@ -1,0 +1,29 @@
+<div class="container mt-5">
+  <div *ngIf="!registerMode" class="text-center">
+    <h1>Find your match</h1>
+    <p class="lead">
+      Create a profile, browse members, and start a conversation.
+    </p>
+    <div class="text-center">
+      <button class="btn btn-primary btn-lg mr-2" (click)="registerToggle()">
+        Register
+      </button>
+      <a class="btn btn-outline-info btn-lg" href="#how-it-works">How it works</a>
+    </div>
+  </div>
+
+  <div *ngIf="registerMode" class="container">
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-8 col-lg-6">
+        <app-register
+          (cancelRegister)="cancelRegisterMode($event)"
+        ></app-register>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section id="how-it-works" class="container my-5" aria-labelledby="how-title">
+  <h2 id="how-title">Profiles, preferences and conversations</h2>
+  <p>Browse profiles using the available filters, save likes, and exchange messages. This project does not use an AI matching model. Use fictional information while evaluating the local demo.</p>
+</section>
